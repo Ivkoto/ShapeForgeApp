@@ -1,0 +1,142 @@
+/* ─── Group grid (Level 1) ───────────────────────────────────────────────── */
+
+.groupGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.groupCard {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 24px 12px;
+  border: 1px solid #dfe7dc;
+  border-top: 3px solid;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(32, 48, 38, 0.05);
+  color: #213128;
+  text-align: center;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.groupCard:hover {
+  border-color: var(--page-accent);
+  box-shadow: 0 8px 24px rgba(32, 48, 38, 0.1);
+}
+
+.groupCard strong {
+  font-size: 1rem;
+}
+
+.groupCard span {
+  color: #667269;
+  font-size: 0.82rem;
+}
+
+/* ─── Level header (back + title) ────────────────────────────────────────── */
+
+.levelHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid #d7e1d3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #213128;
+  font-weight: 800;
+  font-size: 0.84rem;
+}
+
+.backButton:hover {
+  border-color: var(--page-accent);
+  color: var(--page-accent-strong);
+}
+
+.levelTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #17211b;
+  flex: 1;
+}
+
+/* ─── Recipe list (Level 2) ──────────────────────────────────────────────── */
+
+.recipeList {
+  display: grid;
+  gap: 8px;
+}
+
+.recipeCard {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #dfe7dc;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #213128;
+  font-weight: 750;
+  text-align: left;
+  transition: border-color 120ms ease;
+}
+
+.recipeCard:hover {
+  border-color: var(--page-accent);
+  color: var(--page-accent-strong);
+}
+
+.emptyText {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed #cdd8c9;
+  border-radius: 8px;
+  color: #667269;
+  background: #fbfcfa;
+}
+
+/* ─── Recipe detail (Level 3) ────────────────────────────────────────────── */
+
+.recipeDetail {
+  display: grid;
+  gap: 10px;
+}
+
+.recipeName {
+  margin: 0 0 8px;
+  color: #13251a;
+  font-size: 1.1rem;
+}
+
+.preparationText {
+  margin: 0;
+  color: #435047;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.ingredientList {
+  display: grid;
+  gap: 10px;
+}
+
+.ingredientRow {
+  display: grid;
+  grid-template-columns: 1fr 38px;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .groupGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,28 @@
+.macroRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.title {
+  font-size: 0.92rem;
+  color: #13251a;
+}
+
+.fieldGroup {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.fieldGroup span {
+  color: #647067;
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-width: 28px;
+}

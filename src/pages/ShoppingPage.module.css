@@ -1,0 +1,76 @@
+/* ─── Category grid ──────────────────────────────────────────────────────── */
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+/* ─── Shopping list rows ─────────────────────────────────────────────────── */
+
+.shoppingList {
+  display: grid;
+  gap: 10px;
+}
+
+.shoppingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shoppingRow input[type="checkbox"] {
+  flex: 0 0 16px;
+  width: 16px;
+  min-height: 16px;
+  accent-color: #14753a;
+}
+
+.shoppingRow input[type="text"],
+.shoppingRow input:not([type]) {
+  min-height: 34px;
+}
+
+.nameInput {
+  flex: 1 1 auto;
+}
+
+.quantityInput {
+  flex: 0 0 80px;
+  max-width: 80px;
+}
+
+.itemText {
+  font-size: 0.9rem;
+  color: #213128;
+}
+
+.itemChecked {
+  font-size: 0.9rem;
+  color: #8a968f;
+  text-decoration: line-through;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 1120px) {
+  .categoryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .shoppingRow {
+    flex-wrap: wrap;
+  }
+
+  .nameInput {
+    flex: 1 1 100%;
+  }
+
+  .quantityInput {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+}

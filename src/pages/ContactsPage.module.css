@@ -1,0 +1,74 @@
+/* ─── Contact grid ───────────────────────────────────────────────────────── */
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.contactGrid :global(.full-field) {
+  grid-column: 1 / -1;
+}
+
+/* ─── Trainer info ──────────────────────────────────────────────────────── */
+
+.pageHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: #17211b;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.trainerName {
+  margin: 0 0 12px;
+  color: #17211b;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.notes {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+  color: #435047;
+  line-height: 1.55;
+}
+
+/* ─── Trainer links ──────────────────────────────────────────────────────── */
+
+.trainerLinks {
+  display: grid;
+  gap: 10px;
+}
+
+.trainerLinks a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+  color: #213128;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 120ms ease;
+}
+
+.trainerLinks a:hover {
+  border-color: var(--page-accent);
+  color: var(--page-accent-strong);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .contactGrid {
+    grid-template-columns: 1fr;
+  }
+}

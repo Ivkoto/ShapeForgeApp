@@ -1,0 +1,149 @@
+/* ─── Day tabs ───────────────────────────────────────────────────────────── */
+
+.dayTabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dayTabs button {
+  min-height: 40px;
+  border: 1px solid #d7e1d3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #213128;
+  font-weight: 800;
+}
+
+.dayTabs button.active {
+  border-color: var(--page-accent);
+  background: var(--page-accent-soft);
+  color: var(--page-accent-strong);
+}
+
+/* ─── Meal table ─────────────────────────────────────────────────────────── */
+
+.mealPanel {
+  padding: 0 !important;
+}
+
+@media (min-width: 721px) {
+  .mealPanel {
+    padding: 5px !important;
+  }
+}
+
+.mealTable {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (min-width: 721px) {
+  .mealTable {
+    padding: 5px;
+  }
+}
+
+.mealTableHead,
+.mealTableRow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 8px;
+  min-width: 780px;
+}
+
+.mealTableHead {
+  margin-bottom: 8px;
+  color: var(--page-accent-strong);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.mealTableHead span {
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--page-accent-soft);
+}
+
+.mealTableRow {
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.mealCell {
+  display: grid;
+  gap: 4px;
+}
+
+.mealCell span {
+  display: none;
+  color: var(--page-accent-strong);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.mealCell textarea {
+  min-height: 72px;
+}
+
+.mealText {
+  min-height: 72px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #edf1ea;
+  border-top: 3px solid var(--page-accent);
+  border-radius: 8px;
+  background: #fbfcfa;
+  color: #213128;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.mealTextEmpty {
+  color: #8a968f;
+  font-style: italic;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .dayTabs {
+    grid-template-columns: repeat(7, minmax(42px, 1fr));
+    gap: 5px;
+  }
+
+  .dayTabs button {
+    min-height: 36px;
+    padding: 6px 2px;
+    font-size: 0.74rem;
+  }
+
+  .mealTable {
+    overflow-x: visible;
+  }
+
+  .mealTableHead {
+    display: none;
+  }
+
+  .mealTableRow {
+    min-width: 0;
+    grid-template-columns: 1fr;
+    gap: 7px;
+    padding: 10px;
+    border: 1px solid #edf1ea;
+    border-radius: 8px;
+    background: #fbfcfa;
+  }
+
+  .mealCell span {
+    display: block;
+  }
+
+  .mealCell textarea,
+  .mealText {
+    min-height: 68px;
+  }
+}

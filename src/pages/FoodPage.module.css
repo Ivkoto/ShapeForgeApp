@@ -1,0 +1,361 @@
+/* ─── Start date ─────────────────────────────────────────────────────────── */
+
+.startDateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.startDateContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #536159;
+}
+
+.startDateInfo {
+  font-size: 0.88rem;
+  color: #536159;
+  line-height: 1.4;
+}
+
+.startDateWarning {
+  font-size: 0.88rem;
+  color: #b42318;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* ─── Daily targets ──────────────────────────────────────────────────────── */
+
+.targetSummary {
+  display: grid;
+  gap: 12px;
+}
+
+.targetHero {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #dcfce7, #ffffff 68%);
+  border: 1px solid #bbf7d0;
+}
+
+.targetHero span,
+.targetMacroList span {
+  color: #14753a;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.targetHero strong {
+  color: #102016;
+  font-size: 2rem;
+  line-height: 1.05;
+}
+
+.targetHero small,
+.targetMacroList small,
+.waterNote {
+  color: #536159;
+}
+
+.targetMacroList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.targetMacroList article {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.targetMacroList strong {
+  color: #9f1239;
+  font-size: 1.2rem;
+}
+
+.waterNote {
+  margin: 0;
+  padding: 12px;
+  border-left: 3px solid #1d4ed8;
+  border-radius: 8px;
+  background: #eff6ff;
+  line-height: 1.45;
+}
+
+/* ─── Macro editor ───────────────────────────────────────────────────────── */
+
+.macroEditor {
+  display: grid;
+  gap: 10px;
+}
+
+.calorieRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.rowTitle {
+  font-size: 0.92rem;
+  color: #13251a;
+}
+
+.fieldGroup {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.fieldGroup span {
+  color: #647067;
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-width: 28px;
+}
+
+.macroRow {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(3, minmax(86px, 1fr));
+  gap: 8px;
+  align-items: end;
+  padding: 10px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.macroRow strong {
+  padding-bottom: 8px;
+}
+
+.macroRow label {
+  display: grid;
+  gap: 4px;
+  color: #647067;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+/* ─── Supplements ────────────────────────────────────────────────────────── */
+
+.supplementSummary {
+  display: grid;
+  gap: 10px;
+}
+
+.supplementCard {
+  display: grid;
+  grid-template-columns: 1fr 38px;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.supplementCard h3 {
+  margin: 0 0 4px;
+  color: #14753a;
+  font-size: 0.98rem;
+}
+
+.supplementCard p {
+  margin: 0;
+  color: #435047;
+  line-height: 1.45;
+}
+
+.supplementEditList {
+  display: grid;
+  gap: 10px;
+}
+
+.miniCard {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+/* ─── Advice & dining ────────────────────────────────────────────────────── */
+
+.adviceRow {
+  display: grid;
+  grid-template-columns: 1fr 38px;
+  gap: 8px;
+  align-items: center;
+}
+
+.longText {
+  margin-bottom: 8px;
+  color: #435047;
+  line-height: 1.55;
+}
+
+.macroInfoList {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .macroRow,
+  .targetMacroList,
+  .supplementCard {
+    grid-template-columns: 1fr;
+  }
+
+  .macroRow {
+    gap: 7px;
+  }
+
+  .macroRow strong {
+    padding-bottom: 0;
+  }
+}
+
+/* ─── Body Measurements ──────────────────────────────────────────────────── */
+
+.measurementCard {
+  padding: 12px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+  margin-bottom: 10px;
+}
+
+.measurementDateRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.measurementFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.measurementField {
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: #647067;
+  font-weight: 700;
+}
+
+.measurementDate {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  color: #14753a;
+}
+
+.measurementGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.measurementItem {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid #edf1ea;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.measurementItem span {
+  font-size: 0.75rem;
+  color: #647067;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.measurementItem strong {
+  font-size: 0.95rem;
+  color: #13251a;
+}
+
+.olderMeasurements {
+  margin-top: 12px;
+}
+
+.olderMeasurements summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #536159;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.measurementsList {
+  display: grid;
+  gap: 10px;
+}
+
+.emptyText {
+  color: #647067;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+/* ─── Measurement Chart ──────────────────────────────────────────────────── */
+
+.chartContainer {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fff;
+}
+
+/* ─── Measurement Row (compact view) ─────────────────────────────────────── */
+
+.measurementRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf1ea;
+}
+
+.measurementRow:last-child {
+  border-bottom: none;
+}
+
+.measurementRowDate {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #14753a;
+  white-space: nowrap;
+}
+
+.measurementRowValues {
+  font-size: 0.82rem;
+  color: #435047;
+  line-height: 1.4;
+}

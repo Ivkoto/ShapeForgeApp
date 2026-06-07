@@ -1,0 +1,123 @@
+/* ─── Day strip (training-specific: not sticky) ──────────────────────────── */
+
+.dayTabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dayTabs button {
+  min-height: 40px;
+  border: 1px solid #d7e1d3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #213128;
+  font-weight: 800;
+}
+
+.dayTabs button.active {
+  border-color: var(--page-accent);
+  background: var(--page-accent-soft);
+  color: var(--page-accent-strong);
+}
+
+/* ─── Static view styles ──────────────────────────────────────────────────── */
+
+.staticText {
+  margin: 0 0 8px;
+  color: #435047;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.metaView {
+  display: grid;
+  gap: 10px;
+}
+
+/* ─── Weekly program grid ────────────────────────────────────────────────── */
+
+.weekProgram {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.weekProgram label {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #edf1ea;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.weekProgram span {
+  color: #14753a;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+/* ─── Workout sections ───────────────────────────────────────────────────── */
+
+.workoutSections {
+  display: grid;
+  gap: 10px;
+}
+
+.workoutSection {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dce7ef;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.workoutSection h3 {
+  margin: 0;
+  color: #13251a;
+  font-size: 0.98rem;
+}
+
+.workoutSectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.exerciseList {
+  display: grid;
+  gap: 10px;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 1120px) {
+  .weekProgram {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .dayTabs {
+    grid-template-columns: repeat(7, minmax(42px, 1fr));
+    gap: 5px;
+  }
+
+  .dayTabs button {
+    min-height: 36px;
+    padding: 6px 2px;
+    font-size: 0.74rem;
+  }
+
+  .weekProgram {
+    grid-template-columns: 1fr;
+  }
+
+  .workoutSectionTitle {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
