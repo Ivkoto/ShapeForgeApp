@@ -1,5 +1,5 @@
 const CACHE_NAME = "shapeforge-v2";
-const APP_SHELL = ["/", "/index.html", "/icons/icon.png"];
+const APP_SHELL = ["/", "/index.html", "/icons/icon.png", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 function isCacheableResponse(response) {
   return response && response.ok && response.type !== "opaque";
