@@ -107,6 +107,11 @@ p {
   font-weight: 850;
 }
 
+.brand-logout {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
 .brand-mark {
   width: 22px;
   height: 22px;
@@ -145,11 +150,6 @@ p {
 .nav-list button.active {
   background: var(--page-accent-soft);
   color: var(--page-accent-strong);
-}
-
-.sidebar-logout {
-  margin-top: 18px;
-  width: 100%;
 }
 
 /* ─── Workspace ──────────────────────────────────────────────────────────── */

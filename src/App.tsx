@@ -1,40 +1,10 @@
-import {
-  BookOpenText,
-  CalendarDays,
-  ChefHat,
-  Dumbbell,
-  ListChecks,
-  LogOut,
-  Pencil,
-  Phone,
-  ShoppingBasket,
-} from "lucide-react";
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { MonthSelect } from "./components/MonthSelect";
+import { AppShell, pageLoaders } from "./app/AppShell";
+import type { PageId } from "./app/AppShell";
 import { supabase, supabaseConfigError } from "./lib/supabase";
 import { normalizeAppState, useAppState } from "./store/useAppState";
-
-type PageId = "food" | "regime" | "shopping" | "recipes" | "training" | "contacts";
-
-const pages: { id: PageId; label: string; shortLabel: string; icon: ReactNode }[] = [
-  { id: "food", label: "План", shortLabel: "План", icon: <BookOpenText size={18} /> },
-  { id: "regime", label: "Хранителен режим", shortLabel: "Режим", icon: <CalendarDays size={18} /> },
-  { id: "shopping", label: "Списък пазаруване", shortLabel: "Пазар", icon: <ShoppingBasket size={18} /> },
-  { id: "recipes", label: "Библиотека", shortLabel: "Рецепти", icon: <ChefHat size={18} /> },
-  { id: "training", label: "Тренировъчен план", shortLabel: "Тренировки", icon: <Dumbbell size={18} /> },
-  { id: "contacts", label: "Контакти", shortLabel: "Контакти", icon: <Phone size={18} /> },
-];
-
-const pageLoaders: Record<PageId, () => Promise<unknown>> = {
-  food: () => import("./pages/FoodPage"),
-  regime: () => import("./pages/RegimePage"),
-  shopping: () => import("./pages/ShoppingPage"),
-  recipes: () => import("./pages/RecipesPage"),
-  training: () => import("./pages/TrainingPage"),
-  contacts: () => import("./pages/ContactsPage"),
-};
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -86,23 +56,6 @@ function preloadInitialPageChunk() {
 }
 
 preloadInitialPageChunk();
-
-const FoodPage = lazy(() => pageLoaders.food().then((module) => ({ default: (module as { FoodPage: typeof import("./pages/FoodPage").FoodPage }).FoodPage })));
-const RegimePage = lazy(() =>
-  pageLoaders.regime().then((module) => ({ default: (module as { RegimePage: typeof import("./pages/RegimePage").RegimePage }).RegimePage })),
-);
-const ShoppingPage = lazy(() =>
-  pageLoaders.shopping().then((module) => ({ default: (module as { ShoppingPage: typeof import("./pages/ShoppingPage").ShoppingPage }).ShoppingPage })),
-);
-const RecipesPage = lazy(() =>
-  pageLoaders.recipes().then((module) => ({ default: (module as { RecipesPage: typeof import("./pages/RecipesPage").RecipesPage }).RecipesPage })),
-);
-const TrainingPage = lazy(() =>
-  pageLoaders.training().then((module) => ({ default: (module as { TrainingPage: typeof import("./pages/TrainingPage").TrainingPage }).TrainingPage })),
-);
-const ContactsPage = lazy(() =>
-  pageLoaders.contacts().then((module) => ({ default: (module as { ContactsPage: typeof import("./pages/ContactsPage").ContactsPage }).ContactsPage })),
-);
 
 type AuthMode = "signin" | "signup";
 
@@ -183,6 +136,7 @@ export function App() {
   const saveTimerRef = useRef<number | null>(null);
   const lastLocalEditAtRef = useRef(0);
   const pendingRemoteStateRef = useRef<unknown | null>(null);
+  const sessionUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     latestStateRef.current = state;
@@ -219,7 +173,9 @@ export function App() {
         setAuthError(formatSupabaseError("Authentication failed", error.message));
       }
 
-      setSession(data.session ?? null);
+      const nextSession = data.session ?? null;
+      sessionUserIdRef.current = nextSession?.user.id ?? null;
+      setSession(nextSession);
       setAuthLoading(false);
     };
 
@@ -232,13 +188,22 @@ export function App() {
         return;
       }
 
+      const previousUserId = sessionUserIdRef.current;
+      const nextUserId = nextSession?.user.id ?? null;
+      const userChanged = previousUserId !== nextUserId;
+
+      sessionUserIdRef.current = nextUserId;
+
       setSession(nextSession);
       setSyncError(null);
       if (event !== "INITIAL_SESSION") {
         setAuthError(null);
       }
       setAuthMessage(null);
-      setAppLoading(true);
+
+      if (userChanged) {
+        setAppLoading(nextUserId !== null);
+      }
     });
 
     return () => {
@@ -326,6 +291,21 @@ export function App() {
       cancelled = true;
     };
   }, [authLoading, session?.user.id]);
+
+  useEffect(() => {
+    if (authLoading || !session || !appLoading) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setSyncError("Синхронизацията отнема твърде дълго. Зареждаме локалните данни и ще продължим опита за синхронизация във фонов режим.");
+      setAppLoading(false);
+    }, 12000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [authLoading, appLoading, session?.user.id]);
 
   useEffect(() => {
     const client = supabase;
@@ -555,220 +535,28 @@ export function App() {
     );
   }
 
-  const pageTitle = pages.find((p) => p.id === activePage)?.label ?? "ShapeForge";
-
   return (
-    <div className={`app-shell page-${activePage}`}>
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">
-            <ListChecks size={10} />
-          </span>
-          <span>Моят режим RORI TEAM</span>
-        </div>
-        <nav className="nav-list" aria-label="Основна навигация">
-          {pages.map((page) => (
-            <button
-              key={page.id}
-              className={page.id === activePage ? "active" : ""}
-              onClick={() => setActivePage(page.id)}
-              type="button"
-            >
-              {page.icon}
-              <span>{page.shortLabel}</span>
-            </button>
-          ))}
-        </nav>
-        <button
-          type="button"
-          className="ghost-button sidebar-logout"
-          onClick={handleLogout}
-          aria-label="Изход"
-        >
-          <LogOut size={14} />
-          Изход
-        </button>
-      </aside>
-
-      <main className="workspace">
-        {syncError ? <p className="auth-error inline-error">{syncError}</p> : null}
-        <header className="topbar">
-          <div>
-            <h1>{pageTitle}</h1>
-          </div>
-          {activePage === "food" && (
-            <button
-              type="button"
-              className="icon-button icon-button-sm"
-              onClick={() => setIsEditingFood((v) => !v)}
-              aria-label="Редактирай хранителен план"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
-          {activePage === "regime" && (
-            <div className="topbar-actions">
-              <button
-                type="button"
-                className="icon-button icon-button-sm"
-                onClick={() => setIsEditingRegime((v) => !v)}
-                aria-label="Редактирай режим"
-              >
-                <Pencil size={14} />
-              </button>
-              <MonthSelect
-                activeMonthId={safeActiveMonthId}
-                months={state.mealPlanMonths}
-                onChange={setActiveMonthId}
-              />
-            </div>
-          )}
-          {activePage === "shopping" && (
-            <div className="topbar-actions">
-              <button
-                type="button"
-                className="icon-button icon-button-sm"
-                onClick={() => setIsEditingShopping((v) => !v)}
-                aria-label="Редактирай списък за пазаруване"
-              >
-                <Pencil size={14} />
-              </button>
-              <MonthSelect
-                activeMonthId={safeActiveMonthId}
-                months={state.mealPlanMonths}
-                onChange={setActiveMonthId}
-              />
-            </div>
-          )}
-          {activePage === "recipes" && (
-            <button
-              type="button"
-              className="icon-button icon-button-sm"
-              onClick={() => setIsEditingRecipes((v) => !v)}
-              aria-label="Редактирай рецепти"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
-          {activePage === "training" && (
-            <button
-              type="button"
-              className="icon-button icon-button-sm"
-              onClick={() => setIsEditingTraining((v) => !v)}
-              aria-label="Редактирай тренировки"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
-          {activePage === "contacts" && (
-            <button
-              type="button"
-              className="icon-button icon-button-sm"
-              onClick={() => setIsEditingContacts((v) => !v)}
-              aria-label="Редактирай контакти"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
-        </header>
-
-        <Suspense fallback={<div className="panel muted">Зареждане...</div>}>
-          {activePage === "food" && (
-            <FoodPage
-              startDate={state.startDate}
-              dailyTargets={state.dailyTargets}
-              supplements={state.supplements}
-              advice={state.advice}
-              diningOut={state.diningOut}
-              macros={state.macros}
-              bodyMeasurements={state.bodyMeasurements}
-              isEditing={isEditingFood}
-              updateStartDate={actions.updateStartDate}
-              updateDailyTargets={actions.updateDailyTargets}
-              updateSupplement={actions.updateSupplement}
-              addSupplement={actions.addSupplement}
-              removeSupplement={actions.removeSupplement}
-              updateAdvice={actions.updateAdvice}
-              addAdvice={actions.addAdvice}
-              removeAdvice={actions.removeAdvice}
-              addBodyMeasurement={actions.addBodyMeasurement}
-              updateBodyMeasurement={actions.updateBodyMeasurement}
-              removeBodyMeasurement={actions.removeBodyMeasurement}
-              updateDiningOut={actions.updateDiningOut}
-            />
-          )}
-
-          {activePage === "regime" && (
-            <RegimePage
-              mealPlanMonths={state.mealPlanMonths}
-              activeMonthId={safeActiveMonthId}
-              onMonthChange={setActiveMonthId}
-              updateMeal={actions.updateMeal}
-              isEditing={isEditingRegime}
-              startDate={state.startDate}
-            />
-          )}
-
-          {activePage === "shopping" && (
-            <ShoppingPage
-              mealPlanMonths={state.mealPlanMonths}
-              shoppingLists={state.shoppingLists}
-              activeMonthId={safeActiveMonthId}
-              onMonthChange={setActiveMonthId}
-              isEditing={isEditingShopping}
-              addShoppingItem={actions.addShoppingItem}
-              updateShoppingItem={actions.updateShoppingItem}
-              removeShoppingItem={actions.removeShoppingItem}
-            />
-          )}
-
-          {activePage === "recipes" && (
-            <RecipesPage
-              recipes={state.recipes}
-              isEditing={isEditingRecipes}
-              addRecipe={actions.addRecipe}
-              removeRecipe={actions.removeRecipe}
-              updateRecipe={actions.updateRecipe}
-              addIngredient={actions.addIngredient}
-              updateIngredient={actions.updateIngredient}
-              removeIngredient={actions.removeIngredient}
-            />
-          )}
-
-          {activePage === "training" && (
-            <TrainingPage
-              trainingGoal={state.trainingGoal}
-              trainingMeta={state.trainingMeta}
-              weeklyTraining={state.weeklyTraining}
-              workouts={state.workouts}
-              absExercises={state.absExercises}
-              stretchingExercises={state.stretchingExercises}
-              startDate={state.startDate}
-              isEditing={isEditingTraining}
-              updateTrainingGoalInfo={actions.updateTrainingGoalInfo}
-              updateTrainingMeta={actions.updateTrainingMeta}
-              updateWeeklyFocus={actions.updateWeeklyFocus}
-              updateWorkoutExercise={actions.updateWorkoutExercise}
-              addWorkoutExercise={actions.addWorkoutExercise}
-              removeWorkoutExercise={actions.removeWorkoutExercise}
-              updateAbsExercise={actions.updateAbsExercise}
-              addAbsExercise={actions.addAbsExercise}
-              removeAbsExercise={actions.removeAbsExercise}
-              updateStretchingExercise={actions.updateStretchingExercise}
-              addStretchingExercise={actions.addStretchingExercise}
-              removeStretchingExercise={actions.removeStretchingExercise}
-            />
-          )}
-
-          {activePage === "contacts" && (
-            <ContactsPage
-              contacts={state.contacts}
-              isEditing={isEditingContacts}
-              updateContacts={actions.updateContacts}
-            />
-          )}
-        </Suspense>
-      </main>
-    </div>
+    <AppShell
+      activePage={activePage}
+      setActivePage={setActivePage}
+      safeActiveMonthId={safeActiveMonthId}
+      setActiveMonthId={setActiveMonthId}
+      isEditingFood={isEditingFood}
+      isEditingRegime={isEditingRegime}
+      isEditingShopping={isEditingShopping}
+      isEditingRecipes={isEditingRecipes}
+      isEditingTraining={isEditingTraining}
+      isEditingContacts={isEditingContacts}
+      toggleEditingFood={() => setIsEditingFood((v) => !v)}
+      toggleEditingRegime={() => setIsEditingRegime((v) => !v)}
+      toggleEditingShopping={() => setIsEditingShopping((v) => !v)}
+      toggleEditingRecipes={() => setIsEditingRecipes((v) => !v)}
+      toggleEditingTraining={() => setIsEditingTraining((v) => !v)}
+      toggleEditingContacts={() => setIsEditingContacts((v) => !v)}
+      onLogout={handleLogout}
+      syncError={syncError}
+      state={state}
+      actions={actions}
+    />
   );
 }

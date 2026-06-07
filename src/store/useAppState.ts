@@ -6,6 +6,7 @@ import type {
   Contacts,
   DailyTargets,
   Exercise,
+  InfoCardItem,
   MealSlot,
   Recipe,
   RecipeGroup,
@@ -15,12 +16,107 @@ import type {
   Weekday,
 } from "../types";
 
+type LegacyAppState = Partial<AppState> & {
+  diningOut?: unknown;
+  macros?: unknown;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeInfoCard(value: unknown, fallbackPrefix: string): InfoCardItem | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = typeof value.title === "string" ? value.title : "";
+  const body = typeof value.body === "string" ? value.body : "";
+  const accent = typeof value.accent === "string" ? value.accent : "";
+
+  if (!title && !body && !accent) {
+    return null;
+  }
+
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : createId(fallbackPrefix),
+    title,
+    body,
+    accent,
+  };
+}
+
+function normalizeInfoCardList(value: unknown, fallbackPrefix: string): InfoCardItem[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  return value
+    .map((item) => normalizeInfoCard(item, fallbackPrefix))
+    .filter((item): item is InfoCardItem => item !== null);
+}
+
+function migrateDiningOutItems(raw: LegacyAppState): InfoCardItem[] {
+  const existing = normalizeInfoCardList(raw.diningOutItems, "dining-out");
+  if (existing) {
+    return existing;
+  }
+
+  const migrated: InfoCardItem[] = [];
+
+  if (typeof raw.diningOut === "string" && raw.diningOut.trim()) {
+    migrated.push({
+      id: createId("dining-out"),
+      title: "Основна препоръка",
+      body: raw.diningOut,
+      accent: "",
+    });
+  }
+
+  if (Array.isArray(raw.macros)) {
+    raw.macros.forEach((macro) => {
+      if (!isRecord(macro)) {
+        return;
+      }
+
+      const title = typeof macro.title === "string" ? macro.title : "";
+      const body = typeof macro.description === "string" ? macro.description : "";
+      const accent = typeof macro.sources === "string" ? macro.sources : "";
+
+      if (!title && !body && !accent) {
+        return;
+      }
+
+      migrated.push({
+        id: typeof macro.id === "string" && macro.id ? macro.id : createId("dining-out"),
+        title,
+        body,
+        accent,
+      });
+    });
+  }
+
+  return migrated.length > 0 ? migrated : defaultState.diningOutItems;
+}
+
+function migrateGeneralInfoItems(raw: LegacyAppState): InfoCardItem[] {
+  const existing = normalizeInfoCardList(raw.generalInfoItems, "general-info");
+  return existing ?? defaultState.generalInfoItems;
+}
+
 export function normalizeAppState(value: unknown): AppState {
   if (!value || typeof value !== "object") {
     return defaultState;
   }
 
-  return { ...defaultState, ...(value as Partial<AppState>) };
+  const raw = value as LegacyAppState;
+
+  return {
+    ...defaultState,
+    ...(raw as Partial<AppState>),
+    diningOutItems: migrateDiningOutItems(raw),
+    generalInfoItems: migrateGeneralInfoItems(raw),
+  };
 }
 
 function loadState(): AppState {
@@ -178,10 +274,58 @@ export function useAppState() {
     }));
   }
 
-  // ── Dining Out ─────────────────────────────────────────────────────────────
+  // ── Dining Out & General Info ─────────────────────────────────────────────
 
-  function updateDiningOut(value: string) {
-    setState((s) => ({ ...s, diningOut: value }));
+  function updateDiningOutItem(id: string, patch: Partial<Omit<InfoCardItem, "id">>) {
+    setState((s) => ({
+      ...s,
+      diningOutItems: s.diningOutItems.map((item) =>
+        item.id === id ? { ...item, ...patch } : item
+      ),
+    }));
+  }
+
+  function addDiningOutItem() {
+    setState((s) => ({
+      ...s,
+      diningOutItems: [
+        ...s.diningOutItems,
+        { id: createId("dining-out"), title: "Нова карта", body: "", accent: "" },
+      ],
+    }));
+  }
+
+  function removeDiningOutItem(id: string) {
+    setState((s) => ({
+      ...s,
+      diningOutItems: s.diningOutItems.filter((item) => item.id !== id),
+    }));
+  }
+
+  function updateGeneralInfoItem(id: string, patch: Partial<Omit<InfoCardItem, "id">>) {
+    setState((s) => ({
+      ...s,
+      generalInfoItems: s.generalInfoItems.map((item) =>
+        item.id === id ? { ...item, ...patch } : item
+      ),
+    }));
+  }
+
+  function addGeneralInfoItem() {
+    setState((s) => ({
+      ...s,
+      generalInfoItems: [
+        ...s.generalInfoItems,
+        { id: createId("general-info"), title: "Нова карта", body: "", accent: "" },
+      ],
+    }));
+  }
+
+  function removeGeneralInfoItem(id: string) {
+    setState((s) => ({
+      ...s,
+      generalInfoItems: s.generalInfoItems.filter((item) => item.id !== id),
+    }));
   }
 
   // ── Recipes ─────────────────────────────────────────────────────────────────
@@ -450,8 +594,13 @@ export function useAppState() {
     addShoppingItem,
     updateShoppingItem,
     removeShoppingItem,
-    // diningOut
-    updateDiningOut,
+    // diningOut + general info
+    updateDiningOutItem,
+    addDiningOutItem,
+    removeDiningOutItem,
+    updateGeneralInfoItem,
+    addGeneralInfoItem,
+    removeGeneralInfoItem,
     // recipes
     addRecipe,
     removeRecipe,

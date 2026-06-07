@@ -38,6 +38,13 @@ export type MacroInfo = {
   sources: string;
 };
 
+export type InfoCardItem = {
+  id: string;
+  title: string;
+  body: string;
+  accent: string;
+};
+
 export type MealPlanRow = {
   day: Weekday;
   meals: Record<MealSlot, string>;
@@ -139,7 +146,8 @@ export type AppState = {
   startDate: string;
   supplements: Supplement[];
   advice: string[];
-  diningOut: string;
+  diningOutItems: InfoCardItem[];
+  generalInfoItems: InfoCardItem[];
   macros: MacroInfo[];
   dailyTargets: DailyTargets;
   mealPlanMonths: MealPlanMonth[];

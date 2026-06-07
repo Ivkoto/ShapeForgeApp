@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Legend, ResponsiveContainer } from "rech
 import { CollapsiblePanel } from "../components/CollapsiblePanel";
 import { MacroRow } from "../components/MacroRow";
 import { PageStack } from "../components/PageStack";
-import type { BodyMeasurement, DailyTargets, MacroInfo, Supplement } from "../types";
+import type { BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "../types";
 import styles from "./FoodPage.module.css";
 
 interface FoodPageProps {
@@ -12,8 +12,8 @@ interface FoodPageProps {
   dailyTargets: DailyTargets;
   supplements: Supplement[];
   advice: string[];
-  diningOut: string;
-  macros: MacroInfo[];
+  diningOutItems: InfoCardItem[];
+  generalInfoItems: InfoCardItem[];
   bodyMeasurements: BodyMeasurement[];
   isEditing: boolean;
   updateStartDate: (date: string) => void;
@@ -27,7 +27,12 @@ interface FoodPageProps {
   addBodyMeasurement: () => void;
   updateBodyMeasurement: (id: string, patch: Partial<BodyMeasurement>) => void;
   removeBodyMeasurement: (id: string) => void;
-  updateDiningOut: (value: string) => void;
+  updateDiningOutItem: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => void;
+  addDiningOutItem: () => void;
+  removeDiningOutItem: (id: string) => void;
+  updateGeneralInfoItem: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => void;
+  addGeneralInfoItem: () => void;
+  removeGeneralInfoItem: (id: string) => void;
 }
 
 export function FoodPage({
@@ -35,8 +40,8 @@ export function FoodPage({
   dailyTargets,
   supplements,
   advice,
-  diningOut,
-  macros,
+  diningOutItems,
+  generalInfoItems,
   bodyMeasurements,
   isEditing,
   updateStartDate,
@@ -50,12 +55,21 @@ export function FoodPage({
   addBodyMeasurement,
   updateBodyMeasurement,
   removeBodyMeasurement,
-  updateDiningOut,
+  updateDiningOutItem,
+  addDiningOutItem,
+  removeDiningOutItem,
+  updateGeneralInfoItem,
+  addGeneralInfoItem,
+  removeGeneralInfoItem,
 }: FoodPageProps) {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   function toggle(id: string) {
     setOpenSections((s) => ({ ...s, [id]: !s[id] }));
+  }
+
+  function sanitizeNumericInput(value: string) {
+    return value.replace(/[^0-9]/g, "");
   }
 
   return (
@@ -169,16 +183,18 @@ export function FoodPage({
                 <strong className={styles.rowTitle}>Калориен прием</strong>
                 <div className={styles.fieldGroup}>
                   <input
+                    inputMode="numeric"
                     value={dailyTargets.calories}
-                    onChange={(e) => updateDailyTargets({ calories: e.target.value })}
+                    onChange={(e) => updateDailyTargets({ calories: sanitizeNumericInput(e.target.value) })}
                     aria-label="Калории"
                   />
                   <span>ккал</span>
                 </div>
                 <div className={styles.fieldGroup}>
                   <input
+                    inputMode="numeric"
                     value={dailyTargets.deviation}
-                    onChange={(e) => updateDailyTargets({ deviation: e.target.value })}
+                    onChange={(e) => updateDailyTargets({ deviation: sanitizeNumericInput(e.target.value) })}
                     aria-label="Отклонение"
                   />
                   <span>±</span>
@@ -191,9 +207,9 @@ export function FoodPage({
                 grams={dailyTargets.carbsGrams}
                 onChange={(p) =>
                   updateDailyTargets({
-                    carbsPercent: p.percent ?? dailyTargets.carbsPercent,
-                    carbsCalories: p.calories ?? dailyTargets.carbsCalories,
-                    carbsGrams: p.grams ?? dailyTargets.carbsGrams,
+                    carbsPercent: sanitizeNumericInput(p.percent ?? dailyTargets.carbsPercent),
+                    carbsCalories: sanitizeNumericInput(p.calories ?? dailyTargets.carbsCalories),
+                    carbsGrams: sanitizeNumericInput(p.grams ?? dailyTargets.carbsGrams),
                   })
                 }
               />
@@ -204,9 +220,9 @@ export function FoodPage({
                 grams={dailyTargets.proteinGrams}
                 onChange={(p) =>
                   updateDailyTargets({
-                    proteinPercent: p.percent ?? dailyTargets.proteinPercent,
-                    proteinCalories: p.calories ?? dailyTargets.proteinCalories,
-                    proteinGrams: p.grams ?? dailyTargets.proteinGrams,
+                    proteinPercent: sanitizeNumericInput(p.percent ?? dailyTargets.proteinPercent),
+                    proteinCalories: sanitizeNumericInput(p.calories ?? dailyTargets.proteinCalories),
+                    proteinGrams: sanitizeNumericInput(p.grams ?? dailyTargets.proteinGrams),
                   })
                 }
               />
@@ -217,9 +233,9 @@ export function FoodPage({
                 grams={dailyTargets.fatGrams}
                 onChange={(p) =>
                   updateDailyTargets({
-                    fatPercent: p.percent ?? dailyTargets.fatPercent,
-                    fatCalories: p.calories ?? dailyTargets.fatCalories,
-                    fatGrams: p.grams ?? dailyTargets.fatGrams,
+                    fatPercent: sanitizeNumericInput(p.percent ?? dailyTargets.fatPercent),
+                    fatCalories: sanitizeNumericInput(p.calories ?? dailyTargets.fatCalories),
+                    fatGrams: sanitizeNumericInput(p.grams ?? dailyTargets.fatGrams),
                   })
                 }
               />
@@ -342,28 +358,105 @@ export function FoodPage({
           onToggle={() => toggle("dining")}
         >
           {isEditing ? (
-            <textarea
-              className="large-textarea"
-              value={diningOut}
-              onChange={(e) => updateDiningOut(e.target.value)}
-              aria-label="Препоръки за хранене навън"
-            />
-          ) : (
-            <div className={styles.macroInfoList}>
-              <article className="info-block">
-                <p>{diningOut}</p>
-              </article>
-              {macros.map((macro) => (
-                <article className="info-block" key={macro.id}>
-                  <h3>{macro.title}</h3>
-                  <p>{macro.description}</p>
-                  <strong>{macro.sources}</strong>
+            <div className={styles.supplementEditList}>
+              {diningOutItems.map((item) => (
+                <article className={styles.miniCard} key={item.id}>
+                  <input
+                    value={item.title}
+                    onChange={(e) => updateDiningOutItem(item.id, { title: e.target.value })}
+                    placeholder="Заглавие"
+                    aria-label="Заглавие"
+                  />
+                  <textarea
+                    className="large-textarea"
+                    value={item.body}
+                    onChange={(e) => updateDiningOutItem(item.id, { body: e.target.value })}
+                    placeholder="Текст"
+                    aria-label="Текст"
+                  />
+                  <input
+                    value={item.accent}
+                    onChange={(e) => updateDiningOutItem(item.id, { accent: e.target.value })}
+                    placeholder="Допълнителен акцент (по избор)"
+                    aria-label="Акцент"
+                  />
+                  <button
+                    type="button"
+                    className="icon-button danger"
+                    onClick={() => removeDiningOutItem(item.id)}
+                    aria-label="Изтрий карта"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </article>
               ))}
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={addDiningOutItem}
+              >
+                <Plus size={16} />
+                Добави карта
+              </button>
             </div>
+          ) : (
+            <InfoCardList items={diningOutItems} emptyText="Няма добавени препоръки." />
           )}
         </CollapsiblePanel>
       </div>
+
+      <CollapsiblePanel
+        icon={<BookOpenText size={18} />}
+        title="Обща информация"
+        isOpen={!!openSections.generalInfo}
+        onToggle={() => toggle("generalInfo")}
+      >
+        {isEditing ? (
+          <div className={styles.supplementEditList}>
+            {generalInfoItems.map((item) => (
+              <article className={styles.miniCard} key={item.id}>
+                <input
+                  value={item.title}
+                  onChange={(e) => updateGeneralInfoItem(item.id, { title: e.target.value })}
+                  placeholder="Заглавие"
+                  aria-label="Заглавие"
+                />
+                <textarea
+                  className="large-textarea"
+                  value={item.body}
+                  onChange={(e) => updateGeneralInfoItem(item.id, { body: e.target.value })}
+                  placeholder="Текст"
+                  aria-label="Текст"
+                />
+                <input
+                  value={item.accent}
+                  onChange={(e) => updateGeneralInfoItem(item.id, { accent: e.target.value })}
+                  placeholder="Допълнителен акцент (по избор)"
+                  aria-label="Акцент"
+                />
+                <button
+                  type="button"
+                  className="icon-button danger"
+                  onClick={() => removeGeneralInfoItem(item.id)}
+                  aria-label="Изтрий карта"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </article>
+            ))}
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={addGeneralInfoItem}
+            >
+              <Plus size={16} />
+              Добави карта
+            </button>
+          </div>
+        ) : (
+          <InfoCardList items={generalInfoItems} emptyText="Няма добавена информация." />
+        )}
+      </CollapsiblePanel>
     </PageStack>
   );
 }
@@ -374,7 +467,7 @@ function DailyTargetsView({ targets }: { targets: DailyTargets }) {
       <div className={styles.targetHero}>
         <span>Дневен прием</span>
         <strong>{targets.calories || "0"} ккал</strong>
-        <small>Допустимо отклонение {targets.deviation}</small>
+        <small>Допустимо отклонение {targets.deviation ? `±${targets.deviation}%` : "—"}</small>
       </div>
       <div className={styles.targetMacroList}>
         <article>
@@ -430,6 +523,24 @@ function SupplementsView({ supplements }: { supplements: Supplement[] }) {
   );
 }
 
+function InfoCardList({ items, emptyText }: { items: InfoCardItem[]; emptyText: string }) {
+  if (items.length === 0) {
+    return <p className={styles.emptyText}>{emptyText}</p>;
+  }
+
+  return (
+    <div className={styles.macroInfoList}>
+      {items.map((item) => (
+        <article className="info-block" key={item.id}>
+          <h3>{item.title}</h3>
+          <p className={styles.formattedText}>{item.body}</p>
+          {item.accent ? <strong>{item.accent}</strong> : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function MeasurementCard({
   measurement,
   isEditing,
@@ -461,8 +572,18 @@ function MeasurementCard({
         <div className={styles.measurementDateRow}>
           <input
             type="date"
+            readOnly
             value={measurement.date}
             onChange={(e) => onUpdate(measurement.id, { date: e.target.value })}
+            onClick={(e) => {
+              e.currentTarget.showPicker?.();
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Tab") {
+                e.preventDefault();
+              }
+            }}
+            onPaste={(e) => e.preventDefault()}
             aria-label="Дата на замерване"
           />
           <button
