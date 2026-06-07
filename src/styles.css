@@ -147,12 +147,66 @@ p {
   color: var(--page-accent-strong);
 }
 
+.sidebar-logout {
+  margin-top: 18px;
+  width: 100%;
+}
+
 /* ─── Workspace ──────────────────────────────────────────────────────────── */
 
 .workspace {
   min-width: 0;
   width: min(1260px, 100%);
   padding: 28px;
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(220, 252, 231, 0.7), transparent 28rem),
+    #f7f8f5;
+}
+
+.auth-panel {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+}
+
+.auth-title {
+  margin-bottom: 0;
+  font-size: 1.7rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-submit {
+  width: 100%;
+}
+
+.auth-switch-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.auth-message {
+  margin: 0;
+}
+
+.auth-error {
+  margin: 0;
+  color: #b42318;
+  font-weight: 700;
+}
+
+.inline-error {
+  margin-bottom: 12px;
 }
 
 .topbar {

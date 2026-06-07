@@ -15,10 +15,18 @@ import type {
   Weekday,
 } from "../types";
 
+export function normalizeAppState(value: unknown): AppState {
+  if (!value || typeof value !== "object") {
+    return defaultState;
+  }
+
+  return { ...defaultState, ...(value as Partial<AppState>) };
+}
+
 function loadState(): AppState {
   try {
     const saved = localStorage.getItem(storageKey);
-    return saved ? { ...defaultState, ...JSON.parse(saved) } : defaultState;
+    return saved ? normalizeAppState(JSON.parse(saved)) : defaultState;
   } catch {
     return defaultState;
   }
@@ -420,8 +428,13 @@ export function useAppState() {
     setState((s) => ({ ...s, contacts: { ...s.contacts, ...patch } }));
   }
 
+  function replaceState(nextState: unknown) {
+    setState(normalizeAppState(nextState));
+  }
+
   return {
     state,
+    replaceState,
     // food
     updateStartDate,
     updateDailyTargets,
