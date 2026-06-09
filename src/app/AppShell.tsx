@@ -225,6 +225,7 @@ export function AppShell({
               supplements={state.supplements}
               advice={state.advice}
               diningOutItems={state.diningOutItems}
+              macrosCards={state.macrosCards}
               generalInfoItems={state.generalInfoItems}
               bodyMeasurements={state.bodyMeasurements}
               isEditing={isEditingFood}
@@ -242,6 +243,9 @@ export function AppShell({
               updateDiningOutItem={actions.updateDiningOutItem}
               addDiningOutItem={actions.addDiningOutItem}
               removeDiningOutItem={actions.removeDiningOutItem}
+              updateMacrosCard={actions.updateMacrosCard}
+              addMacrosCard={actions.addMacrosCard}
+              removeMacrosCard={actions.removeMacrosCard}
               updateGeneralInfoItem={actions.updateGeneralInfoItem}
               addGeneralInfoItem={actions.addGeneralInfoItem}
               removeGeneralInfoItem={actions.removeGeneralInfoItem}

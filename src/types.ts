@@ -155,6 +155,7 @@ export type AppState = {
   diningOutItems: InfoCardItem[];
   generalInfoItems: InfoCardItem[];
   macros: MacroInfo[];
+  macrosCards: InfoCardItem[];
   dailyTargets: DailyTargets;
   mealPlanMonths: MealPlanMonth[];
   shoppingLists: MonthlyShoppingList[];

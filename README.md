@@ -76,15 +76,9 @@ Schema migrations live in:
 supabase/migrations/
 ```
 
-The initial data source and database planning docs live in:
+Planning documents and seed scripts (`docs/`, `local/`) are kept locally and intentionally not committed to this repository. They contain private user data and are gitignored.
 
-```text
-docs/initial-data.md
-docs/database-schema.md
-docs/next-steps.md
-```
-
-Private seed scripts with real user data are intentionally kept out of the public migration flow unless explicitly needed.
+If you need to seed initial data after deploying the schema, use the seed function defined in the migration-compatible SQL (see `supabase/migrations/`).
 
 ## Deployment
 

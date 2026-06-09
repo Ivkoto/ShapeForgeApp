@@ -23,7 +23,7 @@ import {
   deletePlanInfoCardFromDb,
   syncInfoCardSortOrders,
 } from "./services/planService";
-import { normalizeAppState, useAppState } from "./store/useAppState";
+import { useAppState } from "./store/useAppState";
 import type { AdviceItem, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "./types";
 
 const fallbackPage: PageId = "food";
@@ -79,11 +79,6 @@ preloadInitialPageChunk();
 
 type AuthMode = "signin" | "signup";
 
-type AppStateRow = {
-  data: unknown;
-  updated_at: string;
-};
-
 function formatSupabaseError(context: string, message: string) {
   return `${context}: ${message}`;
 }
@@ -127,7 +122,6 @@ export function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(true);
-  const [appLoading, setAppLoading] = useState(true);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
@@ -152,27 +146,16 @@ export function App() {
   const safeActiveMonthId = getSafeMonthId(activeMonthId, monthIds);
 
   const latestStateRef = useRef(state);
-  const skipNextSaveRef = useRef(false);
-  const saveTimerRef = useRef<number | null>(null);
-  const lastLocalEditAtRef = useRef(0);
-  const pendingRemoteStateRef = useRef<unknown | null>(null);
   const sessionUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     latestStateRef.current = state;
   }, [state]);
 
-  function applyRemoteState(nextState: unknown) {
-    pendingRemoteStateRef.current = null;
-    skipNextSaveRef.current = true;
-    replaceState(normalizeAppState(nextState));
-  }
-
   useEffect(() => {
     const client = supabase;
     if (!client) {
       setAuthLoading(false);
-      setAppLoading(false);
       return;
     }
 
@@ -208,11 +191,7 @@ export function App() {
         return;
       }
 
-      const previousUserId = sessionUserIdRef.current;
-      const nextUserId = nextSession?.user.id ?? null;
-      const userChanged = previousUserId !== nextUserId;
-
-      sessionUserIdRef.current = nextUserId;
+      sessionUserIdRef.current = nextSession?.user.id ?? null;
 
       setSession(nextSession);
       setSyncError(null);
@@ -220,10 +199,6 @@ export function App() {
         setAuthError(null);
       }
       setAuthMessage(null);
-
-      if (userChanged) {
-        setAppLoading(nextUserId !== null);
-      }
     });
 
     return () => {
@@ -245,92 +220,10 @@ export function App() {
     setStoredValue("active-month", safeActiveMonthId);
   }, [activeMonthId, safeActiveMonthId]);
 
-  useEffect(() => {
-    const client = supabase;
-    if (!client || authLoading) {
-      return;
-    }
-
-    if (!session) {
-      setAppLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadOrCreateState = async () => {
-      setAppLoading(true);
-      setSyncError(null);
-
-      const userId = session.user.id;
-      const { data, error } = await client
-        .from("app_state")
-        .select("data, updated_at")
-        .eq("user_id", userId)
-        .maybeSingle<AppStateRow>();
-
-      if (cancelled) {
-        return;
-      }
-
-      if (error) {
-        setSyncError(formatSupabaseError("Could not load synced state", error.message));
-        setAppLoading(false);
-        return;
-      }
-
-      if (data?.data) {
-        applyRemoteState(data.data);
-        setAppLoading(false);
-        return;
-      }
-
-      const createdAt = new Date().toISOString();
-      const { error: insertError } = await client
-        .from("app_state")
-        .upsert({
-          user_id: userId,
-          data: latestStateRef.current,
-          updated_at: createdAt,
-        });
-
-      if (cancelled) {
-        return;
-      }
-
-      if (insertError) {
-        setSyncError(formatSupabaseError("Could not create synced state", insertError.message));
-      }
-
-      setAppLoading(false);
-    };
-
-    void loadOrCreateState();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, session?.user.id]);
+  // ── Load Plan data from normalized tables ──────────────────────────────────
 
   useEffect(() => {
-    if (authLoading || !session || !appLoading) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setSyncError("Синхронизацията отнема твърде дълго. Зареждаме локалните данни и ще продължим опита за синхронизация във фонов режим.");
-      setAppLoading(false);
-    }, 12000);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [authLoading, appLoading, session?.user.id]);
-
-  // ── Load food data from normalized tables ─────────────────────────────────
-
-  useEffect(() => {
-    if (authLoading || appLoading || !session) {
+    if (authLoading || !session) {
       return;
     }
 
@@ -341,7 +234,6 @@ export function App() {
         const foodData = await fetchPlanData(session.user.id);
         if (cancelled) return;
 
-        // If any normalized data exists, merge it into local state
         const hasData =
           foodData.planStartDate !== null ||
           foodData.dailyTargets !== null ||
@@ -350,7 +242,6 @@ export function App() {
         if (!hasData) return;
 
         setSyncError(null);
-        skipNextSaveRef.current = true;
         replaceState({
           ...latestStateRef.current,
           ...(foodData.planStartDate !== null && { startDate: foodData.planStartDate }),
@@ -367,12 +258,12 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, appLoading, session?.user.id]);
+  }, [authLoading, session?.user.id]);
 
-  // ── Load body measurements from normalized table ──────────────────────────
+  // ── Load body measurements ─────────────────────────────────────────────────
 
   useEffect(() => {
-    if (authLoading || appLoading || !session) {
+    if (authLoading || !session) {
       return;
     }
 
@@ -383,11 +274,8 @@ export function App() {
         const measurements = await fetchBodyMeasurements(session.user.id);
         if (cancelled) return;
 
-        // null means error → fall back to local state silently.
-        // An array (even empty) means success → use DB data.
         if (measurements === null) return;
 
-        skipNextSaveRef.current = true;
         replaceState({
           ...latestStateRef.current,
           bodyMeasurements: measurements,
@@ -402,12 +290,12 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, appLoading, session?.user.id]);
+  }, [authLoading, session?.user.id]);
 
-  // ── Load advice from normalized table ─────────────────────────────────────
+  // ── Load advice ────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (authLoading || appLoading || !session) {
+    if (authLoading || !session) {
       return;
     }
 
@@ -420,7 +308,7 @@ export function App() {
 
         if (advice === null) return; // error → fall back
 
-        skipNextSaveRef.current = true;
+        
         replaceState({
           ...latestStateRef.current,
           advice,
@@ -435,12 +323,12 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, appLoading, session?.user.id]);
+  }, [authLoading, session?.user.id]);
 
-  // ── Load plan info cards (eating_out & general_info) ──────────────────────
+  // ── Load plan info cards (eating_out, macros & general_info) ────────────
 
   useEffect(() => {
-    if (authLoading || appLoading || !session) {
+    if (authLoading || !session) {
       return;
     }
 
@@ -448,8 +336,9 @@ export function App() {
 
     const loadCards = async () => {
       try {
-        const [eatingOut, generalInfo] = await Promise.all([
+        const [eatingOut, macrosCards, generalInfo] = await Promise.all([
           fetchPlanInfoCards(session.user.id, "eating_out"),
+          fetchPlanInfoCards(session.user.id, "macros"),
           fetchPlanInfoCards(session.user.id, "general_info"),
         ]);
         if (cancelled) return;
@@ -459,13 +348,16 @@ export function App() {
         if (eatingOut !== null) {
           patch.diningOutItems = eatingOut;
         }
+        if (macrosCards !== null) {
+          patch.macrosCards = macrosCards;
+        }
         if (generalInfo !== null) {
           patch.generalInfoItems = generalInfo;
         }
 
         if (Object.keys(patch).length === 0) return;
 
-        skipNextSaveRef.current = true;
+        
         replaceState({
           ...latestStateRef.current,
           ...patch,
@@ -480,109 +372,8 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, appLoading, session?.user.id]);
+  }, [authLoading, session?.user.id]);
 
-  useEffect(() => {
-    const client = supabase;
-    if (!client || !session || authLoading || appLoading) {
-      return;
-    }
-
-    const userId = session.user.id;
-    const channel = client
-      .channel(`app-state-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "app_state",
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const row = payload.new as AppStateRow | undefined;
-          if (!row || typeof row.data === "undefined") {
-            return;
-          }
-
-          const editedRecently = Date.now() - lastLocalEditAtRef.current < 1500;
-          if (editedRecently) {
-            pendingRemoteStateRef.current = row.data;
-            return;
-          }
-
-          applyRemoteState(row.data);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void client.removeChannel(channel);
-    };
-  }, [authLoading, appLoading, session?.user.id]);
-
-  useEffect(() => {
-    if (!pendingRemoteStateRef.current) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      if (!pendingRemoteStateRef.current) {
-        return;
-      }
-
-      const editedRecently = Date.now() - lastLocalEditAtRef.current < 1500;
-      if (editedRecently) {
-        return;
-      }
-
-      applyRemoteState(pendingRemoteStateRef.current);
-    }, 1800);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [state]);
-
-  useEffect(() => {
-    const client = supabase;
-    if (!client || !session || authLoading || appLoading) {
-      return;
-    }
-
-    if (skipNextSaveRef.current) {
-      skipNextSaveRef.current = false;
-      return;
-    }
-
-    lastLocalEditAtRef.current = Date.now();
-
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-    }
-
-    saveTimerRef.current = window.setTimeout(async () => {
-      const updatedAt = new Date().toISOString();
-      const { error } = await client
-        .from("app_state")
-        .upsert({
-          user_id: session.user.id,
-          data: latestStateRef.current,
-          updated_at: updatedAt,
-        });
-
-      if (error) {
-        setSyncError(formatSupabaseError("Could not save synced state", error.message));
-      }
-    }, 700);
-
-    return () => {
-      if (saveTimerRef.current !== null) {
-        window.clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [state, authLoading, appLoading, session?.user.id]);
 
   async function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -625,11 +416,6 @@ export function App() {
       return;
     }
 
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
     const { error } = await client.auth.signOut();
     if (error) {
       setSyncError(formatSupabaseError("Sign out failed", error.message));
@@ -645,7 +431,7 @@ export function App() {
     );
   }
 
-  if (authLoading || (session && appLoading)) {
+  if (authLoading) {
     return <FullscreenStatus title="Зареждане..." message="Подготвяме синхронизацията на данните." />;
   }
 
@@ -883,6 +669,38 @@ export function App() {
         const remaining = state.generalInfoItems.filter((item) => item.id !== id);
         deletePlanInfoCardFromDb(id)
           .then(() => syncInfoCardSortOrders(session.user.id, "general_info", remaining))
+          .catch(() => {});
+      }
+    },
+    // ── Macros cards ──────────────────────────────────────────────────────
+    updateMacrosCard: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => {
+      actions.updateMacrosCard(id, patch);
+      if (session) {
+        const existingIndex = state.macrosCards.findIndex((item) => item.id === id);
+        if (existingIndex !== -1) {
+          savePlanInfoCard(session.user.id, { ...state.macrosCards[existingIndex], ...patch }, "macros", existingIndex).catch(() => {});
+        }
+      }
+    },
+    addMacrosCard: () => {
+      const newId = crypto.randomUUID();
+      const sortOrder = state.macrosCards.length;
+      actions.addMacrosCard(newId);
+      if (session) {
+        savePlanInfoCard(session.user.id, {
+          id: newId,
+          title: "Нова карта",
+          body: "",
+          accent: "",
+        }, "macros", sortOrder).catch(() => {});
+      }
+    },
+    removeMacrosCard: (id: string) => {
+      actions.removeMacrosCard(id);
+      if (session) {
+        const remaining = state.macrosCards.filter((item) => item.id !== id);
+        deletePlanInfoCardFromDb(id)
+          .then(() => syncInfoCardSortOrders(session.user.id, "macros", remaining))
           .catch(() => {});
       }
     },

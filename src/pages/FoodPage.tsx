@@ -13,6 +13,7 @@ interface FoodPageProps {
   supplements: Supplement[];
   advice: AdviceItem[];
   diningOutItems: InfoCardItem[];
+  macrosCards: InfoCardItem[];
   generalInfoItems: InfoCardItem[];
   bodyMeasurements: BodyMeasurement[];
   isEditing: boolean;
@@ -30,6 +31,9 @@ interface FoodPageProps {
   updateDiningOutItem: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => void;
   addDiningOutItem: () => void;
   removeDiningOutItem: (id: string) => void;
+  updateMacrosCard: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => void;
+  addMacrosCard: () => void;
+  removeMacrosCard: (id: string) => void;
   updateGeneralInfoItem: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => void;
   addGeneralInfoItem: () => void;
   removeGeneralInfoItem: (id: string) => void;
@@ -41,6 +45,7 @@ export function FoodPage({
   supplements,
   advice,
   diningOutItems,
+  macrosCards,
   generalInfoItems,
   bodyMeasurements,
   isEditing,
@@ -58,6 +63,9 @@ export function FoodPage({
   updateDiningOutItem,
   addDiningOutItem,
   removeDiningOutItem,
+  updateMacrosCard,
+  addMacrosCard,
+  removeMacrosCard,
   updateGeneralInfoItem,
   addGeneralInfoItem,
   removeGeneralInfoItem,
@@ -305,6 +313,59 @@ export function FoodPage({
           )}
         </CollapsiblePanel>
       </div>
+
+      <CollapsiblePanel
+        icon={<BookOpenText size={18} />}
+        title="Макроси"
+        isOpen={!!openSections.macros}
+        onToggle={() => toggle("macros")}
+      >
+        {isEditing ? (
+          <div className={styles.supplementEditList}>
+            {macrosCards.map((item) => (
+              <article className={styles.miniCard} key={item.id}>
+                <input
+                  value={item.title}
+                  onChange={(e) => updateMacrosCard(item.id, { title: e.target.value })}
+                  placeholder="Заглавие"
+                  aria-label="Заглавие"
+                />
+                <textarea
+                  className="large-textarea"
+                  value={item.body}
+                  onChange={(e) => updateMacrosCard(item.id, { body: e.target.value })}
+                  placeholder="Текст"
+                  aria-label="Текст"
+                />
+                <input
+                  value={item.accent}
+                  onChange={(e) => updateMacrosCard(item.id, { accent: e.target.value })}
+                  placeholder="Допълнителен акцент (по избор)"
+                  aria-label="Акцент"
+                />
+                <button
+                  type="button"
+                  className="icon-button danger"
+                  onClick={() => removeMacrosCard(item.id)}
+                  aria-label="Изтрий карта"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </article>
+            ))}
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={addMacrosCard}
+            >
+              <Plus size={16} />
+              Добави карта
+            </button>
+          </div>
+        ) : (
+          <InfoCardList items={macrosCards} emptyText="Няма добавена информация за макроси." />
+        )}
+      </CollapsiblePanel>
 
       <div className="content-grid">
         <CollapsiblePanel

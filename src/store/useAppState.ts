@@ -19,7 +19,6 @@ import type {
 
 type LegacyAppState = Partial<AppState> & {
   diningOut?: unknown;
-  macros?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -63,41 +62,17 @@ function migrateDiningOutItems(raw: LegacyAppState): InfoCardItem[] {
     return existing;
   }
 
-  const migrated: InfoCardItem[] = [];
-
+  // Legacy: old `diningOut` was a single string field
   if (typeof raw.diningOut === "string" && raw.diningOut.trim()) {
-    migrated.push({
+    return [{
       id: crypto.randomUUID(),
       title: "Основна препоръка",
       body: raw.diningOut,
       accent: "",
-    });
+    }];
   }
 
-  if (Array.isArray(raw.macros)) {
-    raw.macros.forEach((macro) => {
-      if (!isRecord(macro)) {
-        return;
-      }
-
-      const title = typeof macro.title === "string" ? macro.title : "";
-      const body = typeof macro.description === "string" ? macro.description : "";
-      const accent = typeof macro.sources === "string" ? macro.sources : "";
-
-      if (!title && !body && !accent) {
-        return;
-      }
-
-      migrated.push({
-        id: typeof macro.id === "string" && macro.id ? macro.id : crypto.randomUUID(),
-        title,
-        body,
-        accent,
-      });
-    });
-  }
-
-  return migrated.length > 0 ? migrated : [];
+  return [];
 }
 
 function migrateAdvice(raw: LegacyAppState): AdviceItem[] {
@@ -358,6 +333,34 @@ export function useAppState() {
     setState((s) => ({
       ...s,
       generalInfoItems: s.generalInfoItems.filter((item) => item.id !== id),
+    }));
+  }
+
+  // ── Macros Cards ──────────────────────────────────────────────────────────
+
+  function updateMacrosCard(id: string, patch: Partial<Omit<InfoCardItem, "id">>) {
+    setState((s) => ({
+      ...s,
+      macrosCards: s.macrosCards.map((item) =>
+        item.id === id ? { ...item, ...patch } : item
+      ),
+    }));
+  }
+
+  function addMacrosCard(id?: string) {
+    setState((s) => ({
+      ...s,
+      macrosCards: [
+        ...s.macrosCards,
+        { id: id ?? createId("macros"), title: "Нова карта", body: "", accent: "" },
+      ],
+    }));
+  }
+
+  function removeMacrosCard(id: string) {
+    setState((s) => ({
+      ...s,
+      macrosCards: s.macrosCards.filter((item) => item.id !== id),
     }));
   }
 
@@ -627,13 +630,16 @@ export function useAppState() {
     addShoppingItem,
     updateShoppingItem,
     removeShoppingItem,
-    // diningOut + general info
+    // diningOut + general info + macros
     updateDiningOutItem,
     addDiningOutItem,
     removeDiningOutItem,
     updateGeneralInfoItem,
     addGeneralInfoItem,
     removeGeneralInfoItem,
+    updateMacrosCard,
+    addMacrosCard,
+    removeMacrosCard,
     // recipes
     addRecipe,
     removeRecipe,
