@@ -170,92 +170,10 @@ function workoutDay(day: Weekday, heading: string) {
 
 export const defaultState: AppState = {
   startDate: "",
-  supplements: [
-    {
-      id: "supp-omega",
-      name: "Омега 3",
-      url: "https://www.silabg.com/bg/11682-now-omega-3-fish-oil-1000-mg-500-softgels.html",
-      intake: "1 капсула дневно със закуската или обяда",
-    },
-    {
-      id: "supp-vitamin-c",
-      name: "Витамин Ц",
-      url: "https://www.silabg.com/bg/39038-haya-labs-vitamin-c-with-bioflavonoids-and-rose-hips-1000-mg-100-tabs.html",
-      intake: "1 капсула дневно със закуската или обяда",
-    },
-    {
-      id: "supp-magnesium",
-      name: "Магнезий",
-      url: "https://www.silabg.com/bg/26205-BIOTECH-USA-Magnesium-Chelate-60-Caps.html",
-      intake: "2 капсули дневно вечер преди сън",
-    },
-    {
-      id: "supp-zinc",
-      name: "Цинк",
-      url: "https://www.silabg.com/bg/26207-BIOTECH-USA-Zinc-Chelate-60-Tabs.html",
-      intake: "1 таблетка с обяда",
-    },
-    {
-      id: "supp-collagen",
-      name: "Колаген",
-      url: "https://realfood.bg/",
-      intake: "Сутрин или следобед. Код RORI",
-    },
-  ],
-  advice: [
-    { id: "a7e3f1b2-4c5d-4e6f-8901-23456789abcd", body: "Не пий кафе или чай на празен стомах.", sortOrder: 0 },
-    { id: "b8f4e2c3-5d6e-4f7a-9012-34567890bcde", body: "Храни се редовно и не пропускай закуска.", sortOrder: 1 },
-    { id: "c9a5f3d4-6e7f-4a8b-0123-45678901cdef", body: "Започвай деня си всяка сутрин с 200 мл. топла/хладка вода.", sortOrder: 2 },
-    { id: "d0b6a4e5-7f8a-4b9c-1234-56789012defa", body: "Времето между храненията е около 4 часа.", sortOrder: 3 },
-    { id: "e1c7b5f6-8a9b-4c0d-2345-67890123efab", body: "Грамажите на протеините са дадени в готов вид.", sortOrder: 4 },
-    { id: "f2d8c6a7-9b0c-4d1e-3456-78901234fabc", body: "Грамажите на въглехидратите са в суров вид. Винаги.", sortOrder: 5 },
-    { id: "a3e9d7b8-0c1d-4e2f-4567-89012345abcd", body: "Задължително използвай кухненска везна поне в началото.", sortOrder: 6 },
-    { id: "b4f0e8c9-1d2e-4f3a-5678-90123456bcde", body: "Месата приготвяй на фурна, скара, грил тиган или на пара.", sortOrder: 7 },
-    { id: "c5a1f9d0-2e3f-4a4b-6789-01234567cdef", body: "Овкусявай салатите с 1 с.л. зехтин, лимон/ябълков оцет и малко сол.", sortOrder: 8 },
-  ] as AdviceItem[],
-  diningOutItems: [
-    {
-      id: "dining-out-core",
-      title: "Основна препоръка",
-      body: "Когато се храниш навън, избирай чист протеин, свежи салати без сосове, задушени или грил зеленчуци, ориз/елда/киноа и искай дресинга отделно.",
-      accent: "",
-    },
-    {
-      id: "dining-out-carbs",
-      title: "Въглехидрати",
-      body:
-        "За предпочитане са непреработените храни като плодове, зеленчуци, житни и бобови култури и пълнозърнести продукти.",
-      accent: "Плодове, зеленчуци, ориз",
-    },
-    {
-      id: "dining-out-protein",
-      title: "Белтъчини",
-      body:
-        "Белтъчините са градивните единици на тялото и подпомагат поддържането на мускулна маса и ситост.",
-      accent: "Месо, риба, яйца, растителни източници",
-    },
-    {
-      id: "dining-out-fat",
-      title: "Мазнини",
-      body:
-        "Тялото има нужда от полезни мазнини за енергия и правилно функциониране на клетките.",
-      accent: "Зехтин, ядкови масла, маслини, авокадо, риба и морски дарове",
-    },
-  ],
-  generalInfoItems: [
-    {
-      id: "general-info-weighing",
-      title: "Проследяване на прогреса",
-      body: "Използвай кухненска везна и записвай резултатите си редовно, за да следиш реалния напредък.",
-      accent: "Постоянството носи точни резултати.",
-    },
-    {
-      id: "general-info-consistency",
-      title: "Последователност",
-      body: "Спазвай режима ежедневно и адаптирай порциите според целите, активността и обратната връзка от тялото.",
-      accent: "Фокусът е върху дългосрочни устойчиви навици.",
-    },
-  ],
+  supplements: [] as Supplement[],
+  advice: [] as AdviceItem[],
+  diningOutItems: [] as InfoCardItem[],
+  generalInfoItems: [] as InfoCardItem[],
   macros: [
     {
       id: "macro-carbs",

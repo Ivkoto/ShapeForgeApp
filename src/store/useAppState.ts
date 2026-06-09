@@ -40,7 +40,7 @@ function normalizeInfoCard(value: unknown, fallbackPrefix: string): InfoCardItem
   }
 
   return {
-    id: typeof value.id === "string" && value.id ? value.id : createId(fallbackPrefix),
+    id: typeof value.id === "string" && value.id ? value.id : crypto.randomUUID(),
     title,
     body,
     accent,
@@ -67,7 +67,7 @@ function migrateDiningOutItems(raw: LegacyAppState): InfoCardItem[] {
 
   if (typeof raw.diningOut === "string" && raw.diningOut.trim()) {
     migrated.push({
-      id: createId("dining-out"),
+      id: crypto.randomUUID(),
       title: "Основна препоръка",
       body: raw.diningOut,
       accent: "",
@@ -89,7 +89,7 @@ function migrateDiningOutItems(raw: LegacyAppState): InfoCardItem[] {
       }
 
       migrated.push({
-        id: typeof macro.id === "string" && macro.id ? macro.id : createId("dining-out"),
+        id: typeof macro.id === "string" && macro.id ? macro.id : crypto.randomUUID(),
         title,
         body,
         accent,
@@ -97,7 +97,7 @@ function migrateDiningOutItems(raw: LegacyAppState): InfoCardItem[] {
     });
   }
 
-  return migrated.length > 0 ? migrated : defaultState.diningOutItems;
+  return migrated.length > 0 ? migrated : [];
 }
 
 function migrateAdvice(raw: LegacyAppState): AdviceItem[] {
@@ -117,12 +117,12 @@ function migrateAdvice(raw: LegacyAppState): AdviceItem[] {
     }));
   }
 
-  return defaultState.advice;
+  return [];
 }
 
 function migrateGeneralInfoItems(raw: LegacyAppState): InfoCardItem[] {
   const existing = normalizeInfoCardList(raw.generalInfoItems, "general-info");
-  return existing ?? defaultState.generalInfoItems;
+  return existing ?? [];
 }
 
 export function normalizeAppState(value: unknown): AppState {
