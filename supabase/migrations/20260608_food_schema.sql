@@ -421,3 +421,21 @@ for all
 to authenticated
 using ((select auth.uid()) = user_id)
 with check ((select auth.uid()) = user_id);
+
+grant usage on schema public to authenticated;
+
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.body_measurements to authenticated;
+grant select, insert, update, delete on public.daily_targets to authenticated;
+grant select, insert, update, delete on public.supplements to authenticated;
+grant select, insert, update, delete on public.advice_items to authenticated;
+grant select, insert, update, delete on public.plan_info_cards to authenticated;
+grant select, insert, update, delete on public.program_months to authenticated;
+grant select, insert, update, delete on public.meal_plan_days to authenticated;
+grant select, insert, update, delete on public.meal_plan_entries to authenticated;
+grant select, insert, update, delete on public.shopping_categories to authenticated;
+grant select, insert, update, delete on public.shopping_items to authenticated;
+grant select, insert, update, delete on public.recipe_groups to authenticated;
+grant select, insert, update, delete on public.recipes to authenticated;
+grant select, insert, update, delete on public.recipe_ingredients to authenticated;
+grant select, insert, update, delete on public.recipe_months to authenticated;
