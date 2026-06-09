@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { DailyTargets, Supplement } from "../types";
+import type { BodyMeasurement, DailyTargets, Supplement } from "../types";
 
 // ── Types for DB rows ────────────────────────────────────────────────────────
 
@@ -194,4 +194,100 @@ export async function deleteSupplementFromDb(
   if (!supabase) return;
 
   await supabase.from("supplements").delete().eq("id", supplementId);
+}
+
+// ── Body Measurements ────────────────────────────────────────────────────────
+
+interface DbBodyMeasurement {
+  id: string;
+  user_id: string;
+  measured_on: string;
+  height_cm: number | null;
+  neck_cm: number | null;
+  waist_navel_cm: number | null;
+  waist_above_cm: number | null;
+  hips_cm: number | null;
+  thigh_cm: number | null;
+  calf_cm: number | null;
+  bicep_cm: number | null;
+  bust_cm: number | null;
+}
+
+function dbMeasurementToLocal(row: DbBodyMeasurement): BodyMeasurement {
+  return {
+    id: row.id,
+    date: row.measured_on ?? "",
+    height: row.height_cm != null ? String(row.height_cm) : "",
+    neck: row.neck_cm != null ? String(row.neck_cm) : "",
+    waistNavel: row.waist_navel_cm != null ? String(row.waist_navel_cm) : "",
+    waistAbove: row.waist_above_cm != null ? String(row.waist_above_cm) : "",
+    hips: row.hips_cm != null ? String(row.hips_cm) : "",
+    thigh: row.thigh_cm != null ? String(row.thigh_cm) : "",
+    calf: row.calf_cm != null ? String(row.calf_cm) : "",
+    bicep: row.bicep_cm != null ? String(row.bicep_cm) : "",
+    bust: row.bust_cm != null ? String(row.bust_cm) : "",
+  };
+}
+
+/**
+ * Fetch body measurements for a user, ordered by measured_on descending.
+ * Returns `null` on error (caller should fall back to local state).
+ * Returns an empty array when the query succeeds but there are no rows.
+ */
+export async function fetchBodyMeasurements(
+  userId: string,
+): Promise<BodyMeasurement[] | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("body_measurements")
+    .select("*")
+    .eq("user_id", userId)
+    .order("measured_on", { ascending: false })
+    .returns<DbBodyMeasurement[]>();
+
+  if (error) return null;
+
+  return (data ?? []).map(dbMeasurementToLocal);
+}
+
+function measurementStringToNum(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const num = Number(trimmed);
+  return Number.isNaN(num) ? null : num;
+}
+
+function dateOrToday(value: string): string {
+  return value || new Date().toISOString().split("T")[0];
+}
+
+export async function saveBodyMeasurement(
+  userId: string,
+  measurement: BodyMeasurement,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("body_measurements").upsert({
+    id: measurement.id,
+    user_id: userId,
+    measured_on: dateOrToday(measurement.date),
+    height_cm: measurementStringToNum(measurement.height),
+    neck_cm: measurementStringToNum(measurement.neck),
+    waist_navel_cm: measurementStringToNum(measurement.waistNavel),
+    waist_above_cm: measurementStringToNum(measurement.waistAbove),
+    hips_cm: measurementStringToNum(measurement.hips),
+    thigh_cm: measurementStringToNum(measurement.thigh),
+    calf_cm: measurementStringToNum(measurement.calf),
+    bicep_cm: measurementStringToNum(measurement.bicep),
+    bust_cm: measurementStringToNum(measurement.bust),
+  });
+}
+
+export async function deleteBodyMeasurementFromDb(
+  measurementId: string,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("body_measurements").delete().eq("id", measurementId);
 }

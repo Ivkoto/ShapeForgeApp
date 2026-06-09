@@ -11,10 +11,12 @@ import {
   saveSupplement,
   addSupplementToDb,
   deleteSupplementFromDb,
+  fetchBodyMeasurements,
+  saveBodyMeasurement,
+  deleteBodyMeasurementFromDb,
 } from "./services/foodService";
 import { normalizeAppState, useAppState } from "./store/useAppState";
-import { createId } from "./data";
-import type { DailyTargets, Supplement } from "./types";
+import type { BodyMeasurement, DailyTargets, Supplement } from "./types";
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -359,6 +361,41 @@ export function App() {
     };
   }, [authLoading, appLoading, session?.user.id]);
 
+  // ── Load body measurements from normalized table ──────────────────────────
+
+  useEffect(() => {
+    if (authLoading || appLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadMeasurements = async () => {
+      try {
+        const measurements = await fetchBodyMeasurements(session.user.id);
+        if (cancelled) return;
+
+        // null means error → fall back to local state silently.
+        // An array (even empty) means success → use DB data.
+        if (measurements === null) return;
+
+        skipNextSaveRef.current = true;
+        replaceState({
+          ...latestStateRef.current,
+          bodyMeasurements: measurements,
+        });
+      } catch {
+        // Silently fall back to local state.
+      }
+    };
+
+    void loadMeasurements();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, appLoading, session?.user.id]);
+
   useEffect(() => {
     const client = supabase;
     if (!client || !session || authLoading || appLoading) {
@@ -614,7 +651,7 @@ export function App() {
       }
     },
     addSupplement: () => {
-      const newId = createId("supplement");
+      const newId = crypto.randomUUID();
       actions.addSupplement(newId);
       if (session) {
         addSupplementToDb(session.user.id, {
@@ -629,6 +666,42 @@ export function App() {
       actions.removeSupplement(id);
       if (session) {
         deleteSupplementFromDb(id).catch(() => {});
+      }
+    },
+    addBodyMeasurement: () => {
+      const newId = crypto.randomUUID();
+      const lastMeasurement = state.bodyMeasurements[0];
+      const measurement: BodyMeasurement = {
+        id: newId,
+        date: new Date().toISOString().split("T")[0],
+        height: lastMeasurement?.height ?? "",
+        neck: "",
+        waistNavel: "",
+        waistAbove: "",
+        hips: "",
+        thigh: "",
+        calf: "",
+        bicep: "",
+        bust: "",
+      };
+      actions.addBodyMeasurement(newId);
+      if (session) {
+        saveBodyMeasurement(session.user.id, measurement).catch(() => {});
+      }
+    },
+    updateBodyMeasurement: (id: string, patch: Partial<BodyMeasurement>) => {
+      actions.updateBodyMeasurement(id, patch);
+      if (session) {
+        const existing = state.bodyMeasurements.find((m) => m.id === id);
+        if (existing) {
+          saveBodyMeasurement(session.user.id, { ...existing, ...patch }).catch(() => {});
+        }
+      }
+    },
+    removeBodyMeasurement: (id: string) => {
+      actions.removeBodyMeasurement(id);
+      if (session) {
+        deleteBodyMeasurementFromDb(id).catch(() => {});
       }
     },
   };

@@ -522,10 +522,10 @@ export function useAppState() {
 
   // ── Body Measurements ─────────────────────────────────────────────────────
 
-  function addBodyMeasurement() {
+  function addBodyMeasurement(id?: string) {
     const lastMeasurement = state.bodyMeasurements[0];
     const measurement: BodyMeasurement = {
-      id: createId("measurement"),
+      id: id ?? createId("measurement"),
       date: new Date().toISOString().split("T")[0],
       height: lastMeasurement?.height ?? "",
       neck: "",
