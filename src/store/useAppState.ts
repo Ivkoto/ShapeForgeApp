@@ -175,12 +175,12 @@ export function useAppState() {
     }));
   }
 
-  function addSupplement() {
+  function addSupplement(id?: string) {
     setState((s) => ({
       ...s,
       supplements: [
         ...s.supplements,
-        { id: createId("supplement"), name: "", url: "", intake: "" },
+        { id: id ?? createId("supplement"), name: "", url: "", intake: "" },
       ],
     }));
   }

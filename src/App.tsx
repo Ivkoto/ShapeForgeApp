@@ -4,7 +4,17 @@ import type { Session } from "@supabase/supabase-js";
 import { AppShell, pageLoaders } from "./app/AppShell";
 import type { PageId } from "./app/AppShell";
 import { supabase, supabaseConfigError } from "./lib/supabase";
+import {
+  fetchFoodData,
+  savePlanStartDate,
+  saveDailyTargets,
+  saveSupplement,
+  addSupplementToDb,
+  deleteSupplementFromDb,
+} from "./services/foodService";
 import { normalizeAppState, useAppState } from "./store/useAppState";
+import { createId } from "./data";
+import type { DailyTargets, Supplement } from "./types";
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -307,6 +317,48 @@ export function App() {
     };
   }, [authLoading, appLoading, session?.user.id]);
 
+  // ── Load food data from normalized tables ─────────────────────────────────
+
+  useEffect(() => {
+    if (authLoading || appLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadFoodData = async () => {
+      try {
+        const foodData = await fetchFoodData(session.user.id);
+        if (cancelled) return;
+
+        // If any normalized data exists, merge it into local state
+        const hasData =
+          foodData.planStartDate !== null ||
+          foodData.dailyTargets !== null ||
+          foodData.supplements !== null;
+
+        if (!hasData) return;
+
+        setSyncError(null);
+        skipNextSaveRef.current = true;
+        replaceState({
+          ...latestStateRef.current,
+          ...(foodData.planStartDate !== null && { startDate: foodData.planStartDate }),
+          ...(foodData.dailyTargets !== null && { dailyTargets: foodData.dailyTargets }),
+          ...(foodData.supplements !== null && { supplements: foodData.supplements }),
+        });
+      } catch {
+        // Silently fall back to local state.
+      }
+    };
+
+    void loadFoodData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, appLoading, session?.user.id]);
+
   useEffect(() => {
     const client = supabase;
     if (!client || !session || authLoading || appLoading) {
@@ -535,6 +587,52 @@ export function App() {
     );
   }
 
+  // ── Food action wrappers (local + Supabase normalized tables) ────────────
+
+  const foodActions = {
+    ...actions,
+    updateStartDate: (date: string) => {
+      actions.updateStartDate(date);
+      if (session) {
+        savePlanStartDate(session.user.id, date).catch(() => {});
+      }
+    },
+    updateDailyTargets: (patch: Partial<DailyTargets>) => {
+      actions.updateDailyTargets(patch);
+      if (session) {
+        const merged = { ...state.dailyTargets, ...patch };
+        saveDailyTargets(session.user.id, merged).catch(() => {});
+      }
+    },
+    updateSupplement: (id: string, patch: Partial<Supplement>) => {
+      actions.updateSupplement(id, patch);
+      if (session) {
+        const existing = state.supplements.find((s) => s.id === id);
+        if (existing) {
+          saveSupplement({ ...existing, ...patch }).catch(() => {});
+        }
+      }
+    },
+    addSupplement: () => {
+      const newId = createId("supplement");
+      actions.addSupplement(newId);
+      if (session) {
+        addSupplementToDb(session.user.id, {
+          id: newId,
+          name: "",
+          url: "",
+          intake: "",
+        }).catch(() => {});
+      }
+    },
+    removeSupplement: (id: string) => {
+      actions.removeSupplement(id);
+      if (session) {
+        deleteSupplementFromDb(id).catch(() => {});
+      }
+    },
+  };
+
   return (
     <AppShell
       activePage={activePage}
@@ -556,7 +654,7 @@ export function App() {
       onLogout={handleLogout}
       syncError={syncError}
       state={state}
-      actions={actions}
+      actions={foodActions}
     />
   );
 }
