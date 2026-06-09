@@ -53,6 +53,7 @@ export type InfoCardItem = {
 
 export type MealPlanRow = {
   day: Weekday;
+  dayId?: string;
   meals: Record<MealSlot, string>;
 };
 

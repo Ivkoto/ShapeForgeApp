@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AppShell, pageLoaders } from "./app/AppShell";
@@ -23,8 +23,9 @@ import {
   deletePlanInfoCardFromDb,
   syncInfoCardSortOrders,
 } from "./services/planService";
+import { fetchRegimeData, findDayId, upsertMealEntry } from "./services/foodService";
 import { useAppState } from "./store/useAppState";
-import type { AdviceItem, AppState, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "./types";
+import type { AdviceItem, AppState, BodyMeasurement, DailyTargets, InfoCardItem, MealSlot, Supplement, Weekday } from "./types";
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -213,6 +214,38 @@ export function App() {
     setStoredValue("active-month", safeActiveMonthId);
   }, [activeMonthId, safeActiveMonthId]);
 
+  // ── Auto-select month from startDate on initial load ───────────────────────
+
+  const hasAutoSelectedMonth = useRef(false);
+
+  useEffect(() => {
+    // Only auto-select once after initial DB load
+    if (hasAutoSelectedMonth.current) return;
+    if (!state.startDate || state.mealPlanMonths.length === 0) return;
+
+    hasAutoSelectedMonth.current = true;
+
+    const start = new Date(state.startDate);
+    const today = new Date();
+    start.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffMs = today.getTime() - start.getTime();
+
+    if (diffMs < 0) {
+      // Before start date → select first month
+      setActiveMonthId(state.mealPlanMonths[0].id);
+      return;
+    }
+
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const monthIndex = Math.min(
+      Math.floor(diffDays / 7),
+      state.mealPlanMonths.length - 1,
+    );
+
+    setActiveMonthId(state.mealPlanMonths[monthIndex].id);
+  }, [state.startDate, state.mealPlanMonths]);
+
   // ── Load Plan data from normalized tables ──────────────────────────────────
 
   useEffect(() => {
@@ -363,6 +396,37 @@ export function App() {
     };
 
     void loadCards();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, session?.user.id]);
+
+  // ── Load regime data (months, days, entries) ───────────────────────────────
+
+  useEffect(() => {
+    if (authLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRegime = async () => {
+      try {
+        const regimeData = await fetchRegimeData(session.user.id);
+        if (cancelled) return;
+
+        mergeState({
+          mealPlanMonths: regimeData.mealPlanMonths,
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load regime data", getErrorMessage(error)));
+        }
+      }
+    };
+
+    void loadRegime();
 
     return () => {
       cancelled = true;
@@ -697,6 +761,18 @@ export function App() {
         deletePlanInfoCardFromDb(id)
           .then(() => syncInfoCardSortOrders(session.user.id, "macros", remaining))
           .catch(() => {});
+      }
+    },
+    // ── Regime (meal plan entries) ────────────────────────────────────────
+    updateMeal: (monthId: string, day: Weekday, meal: MealSlot, value: string) => {
+      actions.updateMeal(monthId, day, meal, value);
+      if (session) {
+        const dayId = findDayId(state.mealPlanMonths, monthId, day);
+        if (dayId) {
+          upsertMealEntry(session.user.id, dayId, meal, value).catch((error) => {
+            setSyncError(formatSupabaseError("Could not save meal entry", getErrorMessage(error)));
+          });
+        }
       }
     },
   };

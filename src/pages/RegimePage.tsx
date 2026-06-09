@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageStack } from "../components/PageStack";
 import { mealSlots, weekdays } from "../data";
 import type { MealPlanMonth, MealSlot, Weekday } from "../types";
@@ -34,6 +34,18 @@ export function RegimePage({
   startDate,
 }: RegimePageProps) {
   const [activeDay, setActiveDay] = useState<Weekday>(() => computeCurrentDay(startDate));
+  const hasManuallySelectedDay = useRef(false);
+
+  // Auto-update activeDay when startDate loads/changes (but not after manual click)
+  useEffect(() => {
+    if (hasManuallySelectedDay.current) return;
+    setActiveDay(computeCurrentDay(startDate));
+  }, [startDate]);
+
+  function handleDayClick(day: Weekday) {
+    hasManuallySelectedDay.current = true;
+    setActiveDay(day);
+  }
 
   const activeMonth = mealPlanMonths.find((m) => m.id === activeMonthId) ?? mealPlanMonths[0];
   const activeMealRow =
@@ -47,7 +59,7 @@ export function RegimePage({
             key={day}
             type="button"
             className={day === activeDay ? styles.active : ""}
-            onClick={() => setActiveDay(day)}
+            onClick={() => handleDayClick(day)}
           >
             {day.replace(" ", "\u00a0")}
           </button>
