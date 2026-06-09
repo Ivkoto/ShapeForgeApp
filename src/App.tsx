@@ -5,7 +5,7 @@ import { AppShell, pageLoaders } from "./app/AppShell";
 import type { PageId } from "./app/AppShell";
 import { supabase, supabaseConfigError } from "./lib/supabase";
 import {
-  fetchFoodData,
+  fetchPlanData,
   savePlanStartDate,
   saveDailyTargets,
   saveSupplement,
@@ -14,9 +14,17 @@ import {
   fetchBodyMeasurements,
   saveBodyMeasurement,
   deleteBodyMeasurementFromDb,
-} from "./services/foodService";
+  fetchAdviceItems,
+  saveAdviceItem,
+  deleteAdviceItem,
+  syncAdviceSortOrders,
+  fetchPlanInfoCards,
+  savePlanInfoCard,
+  deletePlanInfoCardFromDb,
+  syncInfoCardSortOrders,
+} from "./services/planService";
 import { normalizeAppState, useAppState } from "./store/useAppState";
-import type { BodyMeasurement, DailyTargets, Supplement } from "./types";
+import type { AdviceItem, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "./types";
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -328,9 +336,9 @@ export function App() {
 
     let cancelled = false;
 
-    const loadFoodData = async () => {
+    const loadPlanData = async () => {
       try {
-        const foodData = await fetchFoodData(session.user.id);
+        const foodData = await fetchPlanData(session.user.id);
         if (cancelled) return;
 
         // If any normalized data exists, merge it into local state
@@ -354,7 +362,7 @@ export function App() {
       }
     };
 
-    void loadFoodData();
+    void loadPlanData();
 
     return () => {
       cancelled = true;
@@ -390,6 +398,84 @@ export function App() {
     };
 
     void loadMeasurements();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, appLoading, session?.user.id]);
+
+  // ── Load advice from normalized table ─────────────────────────────────────
+
+  useEffect(() => {
+    if (authLoading || appLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAdvice = async () => {
+      try {
+        const advice = await fetchAdviceItems(session.user.id);
+        if (cancelled) return;
+
+        if (advice === null) return; // error → fall back
+
+        skipNextSaveRef.current = true;
+        replaceState({
+          ...latestStateRef.current,
+          advice,
+        });
+      } catch {
+        // Silently fall back to local state.
+      }
+    };
+
+    void loadAdvice();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, appLoading, session?.user.id]);
+
+  // ── Load plan info cards (eating_out & general_info) ──────────────────────
+
+  useEffect(() => {
+    if (authLoading || appLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCards = async () => {
+      try {
+        const [eatingOut, generalInfo] = await Promise.all([
+          fetchPlanInfoCards(session.user.id, "eating_out"),
+          fetchPlanInfoCards(session.user.id, "general_info"),
+        ]);
+        if (cancelled) return;
+
+        const patch: Partial<typeof latestStateRef.current> = {};
+
+        if (eatingOut !== null) {
+          patch.diningOutItems = eatingOut;
+        }
+        if (generalInfo !== null) {
+          patch.generalInfoItems = generalInfo;
+        }
+
+        if (Object.keys(patch).length === 0) return;
+
+        skipNextSaveRef.current = true;
+        replaceState({
+          ...latestStateRef.current,
+          ...patch,
+        });
+      } catch {
+        // Silently fall back to local state.
+      }
+    };
+
+    void loadCards();
 
     return () => {
       cancelled = true;
@@ -702,6 +788,102 @@ export function App() {
       actions.removeBodyMeasurement(id);
       if (session) {
         deleteBodyMeasurementFromDb(id).catch(() => {});
+      }
+    },
+    // ── Advice (per-row CRUD) ────────────────────────────────────────────
+    updateAdviceItem: (id: string, patch: Partial<AdviceItem>) => {
+      actions.updateAdviceItem(id, patch);
+      if (session) {
+        const existing = state.advice.find((item) => item.id === id);
+        if (existing) {
+          saveAdviceItem(session.user.id, { ...existing, ...patch }).catch(() => {});
+        }
+      }
+    },
+    addAdviceItem: () => {
+      const newId = crypto.randomUUID();
+      const sortOrder = state.advice.length;
+      actions.addAdviceItem(newId);
+      if (session) {
+        saveAdviceItem(session.user.id, {
+          id: newId,
+          body: "",
+          sortOrder,
+        }).catch(() => {});
+      }
+    },
+    removeAdviceItem: (id: string) => {
+      actions.removeAdviceItem(id);
+      if (session) {
+        // After local remove, sync sort_orders for remaining items
+        const remaining = state.advice.filter((item) => item.id !== id);
+        deleteAdviceItem(id)
+          .then(() => syncAdviceSortOrders(session.user.id, remaining))
+          .catch(() => {});
+      }
+    },
+    // ── Dining Out cards ──────────────────────────────────────────────────
+    updateDiningOutItem: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => {
+      actions.updateDiningOutItem(id, patch);
+      if (session) {
+        const existingIndex = state.diningOutItems.findIndex((item) => item.id === id);
+        if (existingIndex !== -1) {
+          savePlanInfoCard(session.user.id, { ...state.diningOutItems[existingIndex], ...patch }, "eating_out", existingIndex).catch(() => {});
+        }
+      }
+    },
+    addDiningOutItem: () => {
+      const newId = crypto.randomUUID();
+      const sortOrder = state.diningOutItems.length;
+      actions.addDiningOutItem(newId);
+      if (session) {
+        savePlanInfoCard(session.user.id, {
+          id: newId,
+          title: "Нова карта",
+          body: "",
+          accent: "",
+        }, "eating_out", sortOrder).catch(() => {});
+      }
+    },
+    removeDiningOutItem: (id: string) => {
+      actions.removeDiningOutItem(id);
+      if (session) {
+        const remaining = state.diningOutItems.filter((item) => item.id !== id);
+        deletePlanInfoCardFromDb(id)
+          .then(() => syncInfoCardSortOrders(session.user.id, "eating_out", remaining))
+          .catch(() => {});
+      }
+    },
+    // ── General Info cards ────────────────────────────────────────────────
+    updateGeneralInfoItem: (id: string, patch: Partial<Omit<InfoCardItem, "id">>) => {
+      actions.updateGeneralInfoItem(id, patch);
+      if (session) {
+        const existingIndex = state.generalInfoItems.findIndex((item) => item.id === id);
+        if (existingIndex !== -1) {
+          savePlanInfoCard(session.user.id, { ...state.generalInfoItems[existingIndex], ...patch }, "general_info", existingIndex).catch(() => {});
+        }
+      }
+    },
+    addGeneralInfoItem: () => {
+      const newId = crypto.randomUUID();
+      const sortOrder = state.generalInfoItems.length;
+      actions.addGeneralInfoItem(newId);
+      if (session) {
+        savePlanInfoCard(session.user.id, {
+          id: newId,
+          title: "Нова карта",
+          body: "",
+          accent: "",
+        }, "general_info", sortOrder).catch(() => {});
+      }
+    },
+    removeGeneralInfoItem: (id: string) => {
+      actions.removeGeneralInfoItem(id);
+      if (session) {
+        const remaining = state.generalInfoItems.filter((item) => item.id !== id);
+        deletePlanInfoCardFromDb(id)
+          .then(() => syncInfoCardSortOrders(session.user.id, "general_info", remaining))
+          .catch(() => {});
       }
     },
   };

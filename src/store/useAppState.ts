@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createId, defaultState, storageKey } from "../data";
 import type {
+  AdviceItem,
   AppState,
   BodyMeasurement,
   Contacts,
@@ -99,6 +100,26 @@ function migrateDiningOutItems(raw: LegacyAppState): InfoCardItem[] {
   return migrated.length > 0 ? migrated : defaultState.diningOutItems;
 }
 
+function migrateAdvice(raw: LegacyAppState): AdviceItem[] {
+  const advice = raw.advice;
+
+  // Already in AdviceItem[] format (check first element for id field)
+  if (Array.isArray(advice) && advice.length > 0 && typeof advice[0] === "object" && advice[0] !== null && "id" in advice[0]) {
+    return advice as AdviceItem[];
+  }
+
+  // Legacy string[] → convert to AdviceItem[]
+  if (Array.isArray(advice)) {
+    return (advice as unknown as string[]).map((body, index) => ({
+      id: crypto.randomUUID(),
+      body: body ?? "",
+      sortOrder: index,
+    }));
+  }
+
+  return defaultState.advice;
+}
+
 function migrateGeneralInfoItems(raw: LegacyAppState): InfoCardItem[] {
   const existing = normalizeInfoCardList(raw.generalInfoItems, "general-info");
   return existing ?? defaultState.generalInfoItems;
@@ -114,6 +135,7 @@ export function normalizeAppState(value: unknown): AppState {
   return {
     ...defaultState,
     ...(raw as Partial<AppState>),
+    advice: migrateAdvice(raw),
     diningOutItems: migrateDiningOutItems(raw),
     generalInfoItems: migrateGeneralInfoItems(raw),
   };
@@ -194,19 +216,30 @@ export function useAppState() {
 
   // ── Advice ──────────────────────────────────────────────────────────────────
 
-  function updateAdvice(index: number, value: string) {
+  function updateAdviceItem(id: string, patch: Partial<AdviceItem>) {
     setState((s) => ({
       ...s,
-      advice: s.advice.map((item, i) => (i === index ? value : item)),
+      advice: s.advice.map((item) =>
+        item.id === id ? { ...item, ...patch } : item
+      ),
     }));
   }
 
-  function addAdvice() {
-    setState((s) => ({ ...s, advice: [...s.advice, ""] }));
+  function addAdviceItem(id?: string) {
+    setState((s) => ({
+      ...s,
+      advice: [
+        ...s.advice,
+        { id: id ?? crypto.randomUUID(), body: "", sortOrder: s.advice.length },
+      ],
+    }));
   }
 
-  function removeAdvice(index: number) {
-    setState((s) => ({ ...s, advice: s.advice.filter((_, i) => i !== index) }));
+  function removeAdviceItem(id: string) {
+    setState((s) => ({
+      ...s,
+      advice: s.advice.filter((item) => item.id !== id),
+    }));
   }
 
   // ── Regime ──────────────────────────────────────────────────────────────────
@@ -285,12 +318,12 @@ export function useAppState() {
     }));
   }
 
-  function addDiningOutItem() {
+  function addDiningOutItem(id?: string) {
     setState((s) => ({
       ...s,
       diningOutItems: [
         ...s.diningOutItems,
-        { id: createId("dining-out"), title: "Нова карта", body: "", accent: "" },
+        { id: id ?? createId("dining-out"), title: "Нова карта", body: "", accent: "" },
       ],
     }));
   }
@@ -311,12 +344,12 @@ export function useAppState() {
     }));
   }
 
-  function addGeneralInfoItem() {
+  function addGeneralInfoItem(id?: string) {
     setState((s) => ({
       ...s,
       generalInfoItems: [
         ...s.generalInfoItems,
-        { id: createId("general-info"), title: "Нова карта", body: "", accent: "" },
+        { id: id ?? createId("general-info"), title: "Нова карта", body: "", accent: "" },
       ],
     }));
   }
@@ -585,9 +618,9 @@ export function useAppState() {
     updateSupplement,
     addSupplement,
     removeSupplement,
-    updateAdvice,
-    addAdvice,
-    removeAdvice,
+    updateAdviceItem,
+    addAdviceItem,
+    removeAdviceItem,
     // regime
     updateMeal,
     // shopping

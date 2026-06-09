@@ -16,6 +16,12 @@ export type Supplement = {
   intake: string;
 };
 
+export type AdviceItem = {
+  id: string;
+  body: string;
+  sortOrder: number;
+};
+
 export type DailyTargets = {
   calories: string;
   deviation: string;
@@ -145,7 +151,7 @@ export type BodyMeasurement = {
 export type AppState = {
   startDate: string;
   supplements: Supplement[];
-  advice: string[];
+  advice: AdviceItem[];
   diningOutItems: InfoCardItem[];
   generalInfoItems: InfoCardItem[];
   macros: MacroInfo[];

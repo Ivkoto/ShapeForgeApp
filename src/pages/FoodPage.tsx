@@ -4,14 +4,14 @@ import { LineChart, Line, XAxis, YAxis, Legend, ResponsiveContainer } from "rech
 import { CollapsiblePanel } from "../components/CollapsiblePanel";
 import { MacroRow } from "../components/MacroRow";
 import { PageStack } from "../components/PageStack";
-import type { BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "../types";
+import type { AdviceItem, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "../types";
 import styles from "./FoodPage.module.css";
 
 interface FoodPageProps {
   startDate: string;
   dailyTargets: DailyTargets;
   supplements: Supplement[];
-  advice: string[];
+  advice: AdviceItem[];
   diningOutItems: InfoCardItem[];
   generalInfoItems: InfoCardItem[];
   bodyMeasurements: BodyMeasurement[];
@@ -21,9 +21,9 @@ interface FoodPageProps {
   updateSupplement: (id: string, patch: Partial<Supplement>) => void;
   addSupplement: () => void;
   removeSupplement: (id: string) => void;
-  updateAdvice: (index: number, value: string) => void;
-  addAdvice: () => void;
-  removeAdvice: (index: number) => void;
+  updateAdviceItem: (id: string, patch: Partial<AdviceItem>) => void;
+  addAdviceItem: () => void;
+  removeAdviceItem: (id: string) => void;
   addBodyMeasurement: () => void;
   updateBodyMeasurement: (id: string, patch: Partial<BodyMeasurement>) => void;
   removeBodyMeasurement: (id: string) => void;
@@ -49,9 +49,9 @@ export function FoodPage({
   updateSupplement,
   addSupplement,
   removeSupplement,
-  updateAdvice,
-  addAdvice,
-  removeAdvice,
+  updateAdviceItem,
+  addAdviceItem,
+  removeAdviceItem,
   addBodyMeasurement,
   updateBodyMeasurement,
   removeBodyMeasurement,
@@ -315,18 +315,18 @@ export function FoodPage({
         >
           {isEditing ? (
             <div className={styles.supplementEditList}>
-              {advice.map((item, index) => (
-                <div className={styles.adviceRow} key={index}>
+              {advice.map((item) => (
+                <div className={styles.adviceRow} key={item.id}>
                   <input
-                    value={item}
-                    onChange={(e) => updateAdvice(index, e.target.value)}
+                    value={item.body}
+                    onChange={(e) => updateAdviceItem(item.id, { body: e.target.value })}
                     placeholder="Съвет"
                     aria-label="Съвет"
                   />
                   <button
                     type="button"
                     className="icon-button danger"
-                    onClick={() => removeAdvice(index)}
+                    onClick={() => removeAdviceItem(item.id)}
                     aria-label="Изтрий съвет"
                   >
                     <Trash2 size={16} />
@@ -336,7 +336,7 @@ export function FoodPage({
               <button
                 type="button"
                 className="secondary-button"
-                onClick={addAdvice}
+                onClick={addAdviceItem}
               >
                 <Plus size={16} />
                 Добави съвет
@@ -345,7 +345,7 @@ export function FoodPage({
           ) : (
             <ul className="compact-list">
               {advice.map((item) => (
-                <li key={item}>{item}</li>
+                <li key={item.id}>{item.body}</li>
               ))}
             </ul>
           )}

@@ -1,0 +1,455 @@
+import { supabase } from "../lib/supabase";
+import type { AdviceItem, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "../types";
+
+// ── Types for DB rows ────────────────────────────────────────────────────────
+
+interface DbDailyTargets {
+  id: string;
+  user_id: string;
+  calories: number | null;
+  deviation_percent: number | null;
+  carbs_percent: number | null;
+  carbs_calories: number | null;
+  carbs_grams: number | null;
+  protein_percent: number | null;
+  protein_calories: number | null;
+  protein_grams: number | null;
+  fat_percent: number | null;
+  fat_calories: number | null;
+  fat_grams: number | null;
+  water_text: string | null;
+}
+
+interface DbSupplement {
+  id: string;
+  user_id: string;
+  name: string;
+  url: string | null;
+  intake: string | null;
+  sort_order: number;
+}
+
+interface DbProfile {
+  id: string;
+  plan_start_date: string | null;
+}
+
+// ── Conversion helpers ───────────────────────────────────────────────────────
+
+function dbTargetsToLocal(row: DbDailyTargets): DailyTargets {
+  return {
+    calories: row.calories != null ? String(row.calories) : "",
+    deviation: row.deviation_percent != null ? String(row.deviation_percent) : "",
+    carbsPercent: row.carbs_percent != null ? String(row.carbs_percent) : "",
+    carbsCalories: row.carbs_calories != null ? String(row.carbs_calories) : "",
+    carbsGrams: row.carbs_grams != null ? String(row.carbs_grams) : "",
+    proteinPercent: row.protein_percent != null ? String(row.protein_percent) : "",
+    proteinCalories: row.protein_calories != null ? String(row.protein_calories) : "",
+    proteinGrams: row.protein_grams != null ? String(row.protein_grams) : "",
+    fatPercent: row.fat_percent != null ? String(row.fat_percent) : "",
+    fatCalories: row.fat_calories != null ? String(row.fat_calories) : "",
+    fatGrams: row.fat_grams != null ? String(row.fat_grams) : "",
+    water: row.water_text ?? "",
+  };
+}
+
+function dbSupplementsToLocal(rows: DbSupplement[]): Supplement[] {
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    url: row.url ?? "",
+    intake: row.intake ?? "",
+  }));
+}
+
+// ── Fetch: profiles, daily_targets, supplements ─────────────────────────────
+
+export interface PlanData {
+  planStartDate: string | null;
+  dailyTargets: DailyTargets | null;
+  supplements: Supplement[] | null;
+}
+
+export async function fetchPlanData(userId: string): Promise<PlanData> {
+  if (!supabase) {
+    return { planStartDate: null, dailyTargets: null, supplements: null };
+  }
+
+  const [profileRes, targetsRes, supplementsRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("plan_start_date")
+      .eq("id", userId)
+      .maybeSingle<DbProfile>(),
+    supabase
+      .from("daily_targets")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle<DbDailyTargets>(),
+    supabase
+      .from("supplements")
+      .select("*")
+      .eq("user_id", userId)
+      .order("sort_order", { ascending: true })
+      .returns<DbSupplement[]>(),
+  ]);
+
+  return {
+    planStartDate: profileRes.data?.plan_start_date ?? null,
+    dailyTargets: targetsRes.data ? dbTargetsToLocal(targetsRes.data) : null,
+    supplements: supplementsRes.error
+      ? null
+      : dbSupplementsToLocal(supplementsRes.data ?? []),
+  };
+}
+
+// ── Save: plan start date ────────────────────────────────────────────────────
+
+export async function savePlanStartDate(
+  userId: string,
+  date: string,
+): Promise<void> {
+  if (!supabase) return;
+
+  const value = date || null;
+
+  await supabase
+    .from("profiles")
+    .upsert({ id: userId, plan_start_date: value });
+}
+
+// ── Save: daily targets ──────────────────────────────────────────────────────
+
+function toNullableInt(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const num = Number(trimmed);
+  return Number.isNaN(num) ? null : num;
+}
+
+function toNullableNum(value: string): number | null {
+  return toNullableInt(value);
+}
+
+export async function saveDailyTargets(
+  userId: string,
+  targets: DailyTargets,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("daily_targets").upsert(
+    {
+      user_id: userId,
+      calories: toNullableInt(targets.calories),
+      deviation_percent: toNullableNum(targets.deviation),
+      carbs_percent: toNullableNum(targets.carbsPercent),
+      carbs_calories: toNullableInt(targets.carbsCalories),
+      carbs_grams: toNullableNum(targets.carbsGrams),
+      protein_percent: toNullableNum(targets.proteinPercent),
+      protein_calories: toNullableInt(targets.proteinCalories),
+      protein_grams: toNullableNum(targets.proteinGrams),
+      fat_percent: toNullableNum(targets.fatPercent),
+      fat_calories: toNullableInt(targets.fatCalories),
+      fat_grams: toNullableNum(targets.fatGrams),
+      water_text: targets.water || null,
+    },
+    { onConflict: "user_id" },
+  );
+}
+
+// ── Save: supplements ────────────────────────────────────────────────────────
+
+export async function saveSupplement(
+  supplement: Supplement,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("supplements").upsert({
+    id: supplement.id,
+    name: supplement.name,
+    url: supplement.url || null,
+    intake: supplement.intake || null,
+  });
+}
+
+export async function addSupplementToDb(
+  userId: string,
+  supplement: Supplement,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("supplements").insert({
+    id: supplement.id,
+    user_id: userId,
+    name: supplement.name,
+    url: supplement.url || null,
+    intake: supplement.intake || null,
+    sort_order: 0,
+  });
+}
+
+export async function deleteSupplementFromDb(
+  supplementId: string,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("supplements").delete().eq("id", supplementId);
+}
+
+// ── Body Measurements ────────────────────────────────────────────────────────
+
+interface DbBodyMeasurement {
+  id: string;
+  user_id: string;
+  measured_on: string;
+  height_cm: number | null;
+  neck_cm: number | null;
+  waist_navel_cm: number | null;
+  waist_above_cm: number | null;
+  hips_cm: number | null;
+  thigh_cm: number | null;
+  calf_cm: number | null;
+  bicep_cm: number | null;
+  bust_cm: number | null;
+}
+
+function dbMeasurementToLocal(row: DbBodyMeasurement): BodyMeasurement {
+  return {
+    id: row.id,
+    date: row.measured_on ?? "",
+    height: row.height_cm != null ? String(row.height_cm) : "",
+    neck: row.neck_cm != null ? String(row.neck_cm) : "",
+    waistNavel: row.waist_navel_cm != null ? String(row.waist_navel_cm) : "",
+    waistAbove: row.waist_above_cm != null ? String(row.waist_above_cm) : "",
+    hips: row.hips_cm != null ? String(row.hips_cm) : "",
+    thigh: row.thigh_cm != null ? String(row.thigh_cm) : "",
+    calf: row.calf_cm != null ? String(row.calf_cm) : "",
+    bicep: row.bicep_cm != null ? String(row.bicep_cm) : "",
+    bust: row.bust_cm != null ? String(row.bust_cm) : "",
+  };
+}
+
+/**
+ * Fetch body measurements for a user, ordered by measured_on descending.
+ * Returns `null` on error (caller should fall back to local state).
+ * Returns an empty array when the query succeeds but there are no rows.
+ */
+export async function fetchBodyMeasurements(
+  userId: string,
+): Promise<BodyMeasurement[] | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("body_measurements")
+    .select("*")
+    .eq("user_id", userId)
+    .order("measured_on", { ascending: false })
+    .returns<DbBodyMeasurement[]>();
+
+  if (error) return null;
+
+  return (data ?? []).map(dbMeasurementToLocal);
+}
+
+function measurementStringToNum(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const num = Number(trimmed);
+  return Number.isNaN(num) ? null : num;
+}
+
+function dateOrToday(value: string): string {
+  return value || new Date().toISOString().split("T")[0];
+}
+
+export async function saveBodyMeasurement(
+  userId: string,
+  measurement: BodyMeasurement,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("body_measurements").upsert({
+    id: measurement.id,
+    user_id: userId,
+    measured_on: dateOrToday(measurement.date),
+    height_cm: measurementStringToNum(measurement.height),
+    neck_cm: measurementStringToNum(measurement.neck),
+    waist_navel_cm: measurementStringToNum(measurement.waistNavel),
+    waist_above_cm: measurementStringToNum(measurement.waistAbove),
+    hips_cm: measurementStringToNum(measurement.hips),
+    thigh_cm: measurementStringToNum(measurement.thigh),
+    calf_cm: measurementStringToNum(measurement.calf),
+    bicep_cm: measurementStringToNum(measurement.bicep),
+    bust_cm: measurementStringToNum(measurement.bust),
+  });
+}
+
+export async function deleteBodyMeasurementFromDb(
+  measurementId: string,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("body_measurements").delete().eq("id", measurementId);
+}
+
+// ── Advice ───────────────────────────────────────────────────────────────────
+
+interface DbAdviceItem {
+  id: string;
+  user_id: string;
+  body: string;
+  sort_order: number;
+}
+
+function dbAdviceToLocal(row: DbAdviceItem): AdviceItem {
+  return {
+    id: row.id,
+    body: row.body,
+    sortOrder: row.sort_order,
+  };
+}
+
+export async function fetchAdviceItems(
+  userId: string,
+): Promise<AdviceItem[] | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("advice_items")
+    .select("*")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true })
+    .returns<DbAdviceItem[]>();
+
+  if (error) return null;
+
+  return (data ?? []).map(dbAdviceToLocal);
+}
+
+export async function saveAdviceItem(
+  userId: string,
+  item: AdviceItem,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("advice_items").upsert({
+    id: item.id,
+    user_id: userId,
+    body: item.body,
+    sort_order: item.sortOrder,
+  });
+}
+
+export async function deleteAdviceItem(
+  itemId: string,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("advice_items").delete().eq("id", itemId);
+}
+
+/**
+ * Rewrite sort_order for all advice items to match their current array order.
+ * Call after add or delete to keep sort_order contiguous.
+ */
+export async function syncAdviceSortOrders(
+  userId: string,
+  items: AdviceItem[],
+): Promise<void> {
+  if (!supabase) return;
+
+  for (let i = 0; i < items.length; i++) {
+    await supabase
+      .from("advice_items")
+      .update({ sort_order: i })
+      .eq("id", items[i].id)
+      .eq("user_id", userId);
+  }
+}
+
+// ── Plan Info Cards ──────────────────────────────────────────────────────────
+
+interface DbPlanInfoCard {
+  id: string;
+  user_id: string;
+  section_key: string;
+  title: string;
+  body: string;
+  emphasis: string | null;
+  sort_order: number;
+}
+
+function dbCardToLocal(row: DbPlanInfoCard): InfoCardItem {
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    accent: row.emphasis ?? "",
+  };
+}
+
+export async function fetchPlanInfoCards(
+  userId: string,
+  sectionKey: string,
+): Promise<InfoCardItem[] | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("plan_info_cards")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("section_key", sectionKey)
+    .order("sort_order", { ascending: true })
+    .returns<DbPlanInfoCard[]>();
+
+  if (error) return null;
+
+  return (data ?? []).map(dbCardToLocal);
+}
+
+export async function savePlanInfoCard(
+  userId: string,
+  card: InfoCardItem,
+  sectionKey: string,
+  sortOrder: number,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("plan_info_cards").upsert({
+    id: card.id,
+    user_id: userId,
+    section_key: sectionKey,
+    title: card.title,
+    body: card.body,
+    emphasis: card.accent || null,
+    sort_order: sortOrder,
+  });
+}
+
+export async function deletePlanInfoCardFromDb(
+  cardId: string,
+): Promise<void> {
+  if (!supabase) return;
+
+  await supabase.from("plan_info_cards").delete().eq("id", cardId);
+}
+
+/**
+ * Rewrite sort_order for all info cards in a section to match array order.
+ * Call after add or delete to keep sort_order contiguous.
+ */
+export async function syncInfoCardSortOrders(
+  userId: string,
+  sectionKey: string,
+  items: InfoCardItem[],
+): Promise<void> {
+  if (!supabase) return;
+
+  for (let i = 0; i < items.length; i++) {
+    await supabase
+      .from("plan_info_cards")
+      .update({ sort_order: i })
+      .eq("id", items[i].id)
+      .eq("user_id", userId);
+  }
+}

@@ -233,9 +233,9 @@ export function AppShell({
               updateSupplement={actions.updateSupplement}
               addSupplement={actions.addSupplement}
               removeSupplement={actions.removeSupplement}
-              updateAdvice={actions.updateAdvice}
-              addAdvice={actions.addAdvice}
-              removeAdvice={actions.removeAdvice}
+              updateAdviceItem={actions.updateAdviceItem}
+              addAdviceItem={actions.addAdviceItem}
+              removeAdviceItem={actions.removeAdviceItem}
               addBodyMeasurement={actions.addBodyMeasurement}
               updateBodyMeasurement={actions.updateBodyMeasurement}
               removeBodyMeasurement={actions.removeBodyMeasurement}
