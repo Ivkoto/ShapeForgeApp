@@ -91,15 +91,7 @@ export const defaultState: AppState = {
   mealPlanMonths: [],
   shoppingLists: [],
   shoppingCategories: [],
-  recipes: [
-    {
-      id: "recipe-placeholder",
-      name: "Примерна рецепта",
-      group: "Закуска",
-      ingredients: [{ id: "ingredient-placeholder", text: "Основни продукти и количества" }],
-      preparation: "Начинът на приготвяне ще бъде попълнен тук.",
-    },
-  ],
+  recipes: [],
   trainingGoal: {
     info:
       "С този тренировъчен план си поставяме за цел да изчистим максимално подкожните мазнини, да повишим здравословното тегло и мускулната маса и да подобрим цялостната визия на тялото.",
@@ -160,8 +152,11 @@ export const defaultState: AppState = {
   stretchingExercises: [exercise("Статичен стречинг", "5 мин"), exercise("Разтягане за бедра и седалище", "5 мин")],
   contacts: {
     trainerName: "",
-    phone: "0883 388 307",
-    email: "rori@rorifit.com",
+    phone: "",
+    email: "",
+    facebookUrl: "",
+    instagramUrl: "",
+    websiteUrl: "",
     notes: "",
   },
   bodyMeasurements: [],

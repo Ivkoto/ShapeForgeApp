@@ -99,6 +99,7 @@ export type Recipe = {
   group: RecipeGroup;
   ingredients: Ingredient[];
   preparation: string;
+  monthIds: string[];
 };
 
 export type TrainingGoal = {
@@ -142,6 +143,9 @@ export type Contacts = {
   trainerName: string;
   phone: string;
   email: string;
+  facebookUrl: string;
+  instagramUrl: string;
+  websiteUrl: string;
   notes: string;
 };
 

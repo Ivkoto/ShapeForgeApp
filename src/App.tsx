@@ -30,8 +30,18 @@ import {
   updateShoppingItemInDb,
   deleteShoppingItemFromDb,
 } from "./services/shoppingService";
+import {
+  fetchRecipesData,
+  addRecipeToDb,
+  updateRecipeInDb,
+  deleteRecipeFromDb,
+  addIngredientToDb,
+  updateIngredientInDb,
+  deleteIngredientFromDb,
+} from "./services/recipesService";
+import { fetchContacts, saveContacts } from "./services/contactsService";
 import { useAppState } from "./store/useAppState";
-import type { AdviceItem, AppState, BodyMeasurement, DailyTargets, InfoCardItem, MealSlot, ShoppingCategory, ShoppingItem, Supplement, Weekday } from "./types";
+import type { AdviceItem, AppState, BodyMeasurement, Contacts, DailyTargets, InfoCardItem, MealSlot, Recipe, RecipeGroup, ShoppingCategory, ShoppingItem, Supplement, Weekday } from "./types";
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -71,6 +81,19 @@ function getSafeMonthId(activeMonthId: string, monthIds: string[]) {
   }
 
   return monthIds[0] || fallbackMonthId;
+}
+
+function getFullMonthsSince(startDate: Date, currentDate: Date) {
+  let months =
+    (currentDate.getFullYear() - startDate.getFullYear()) * 12 +
+    currentDate.getMonth() -
+    startDate.getMonth();
+
+  if (currentDate.getDate() < startDate.getDate()) {
+    months -= 1;
+  }
+
+  return Math.max(months, 0);
 }
 
 function preloadInitialPageChunk() {
@@ -243,9 +266,8 @@ export function App() {
       return;
     }
 
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const monthIndex = Math.min(
-      Math.floor(diffDays / 7),
+      getFullMonthsSince(start, today),
       state.mealPlanMonths.length - 1,
     );
 
@@ -465,6 +487,72 @@ export function App() {
     };
 
     void loadShopping();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, session?.user.id]);
+
+  // ── Load recipes data ──────────────────────────────────────────────────────
+
+  const recipeGroupMapRef = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (authLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRecipes = async () => {
+      try {
+        const data = await fetchRecipesData(session.user.id);
+        if (cancelled) return;
+
+        recipeGroupMapRef.current = data.groupNameToId;
+
+        mergeState({
+          recipes: data.recipes,
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load recipes", getErrorMessage(error)));
+        }
+      }
+    };
+
+    void loadRecipes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, session?.user.id]);
+
+  // ── Load contacts ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (authLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadContacts = async () => {
+      try {
+        const data = await fetchContacts(session.user.id);
+        if (cancelled) return;
+
+        if (data !== null) {
+          mergeState({ contacts: data });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load contacts", getErrorMessage(error)));
+        }
+      }
+    };
+
+    void loadContacts();
 
     return () => {
       cancelled = true;
@@ -814,7 +902,9 @@ export function App() {
       }
     },
     // ── Shopping ──────────────────────────────────────────────────────────
-    addShoppingItem: (monthId: string, category: ShoppingCategory) => {
+    addShoppingItem: (monthId: string, categoryOrItem: ShoppingCategory | ShoppingItem) => {
+      // ShoppingPage passes category name as string
+      const category = typeof categoryOrItem === "string" ? categoryOrItem : categoryOrItem.category;
       const catInfo = state.shoppingCategories.find((c) => c.name === category);
       if (!catInfo) {
         setSyncError("Категорията не е намерена в базата данни.");
@@ -868,6 +958,106 @@ export function App() {
       if (session) {
         deleteShoppingItemFromDb(id).catch((error) => {
           setSyncError(formatSupabaseError("Could not delete shopping item", getErrorMessage(error)));
+        });
+      }
+    },
+    // ── Recipes ───────────────────────────────────────────────────────────
+    addRecipe: (group: RecipeGroup) => {
+      const recipeId = crypto.randomUUID();
+      const ingredientId = crypto.randomUUID();
+
+      if (!session) {
+        // No session — just add locally
+        return actions.addRecipe(group, recipeId, ingredientId);
+      }
+
+      const groupId = recipeGroupMapRef.current.get(group);
+      if (!groupId) {
+        setSyncError("Групата рецепти не е намерена в базата данни.");
+        return recipeId;
+      }
+
+      const sortOrder = state.recipes.filter((r) => r.group === group).length;
+
+      addRecipeToDb(session.user.id, groupId, {
+        id: recipeId,
+        name: "Нова рецепта",
+        preparation: "",
+        sortOrder,
+      }).then(() =>
+        addIngredientToDb(session.user.id, recipeId, {
+          id: ingredientId,
+          text: "",
+          sortOrder: 0,
+        }),
+      ).then(() => {
+        // Only add to local state after DB success
+        actions.addRecipe(group, recipeId, ingredientId);
+      }).catch((error) => {
+        setSyncError(formatSupabaseError("Could not add recipe", getErrorMessage(error)));
+      });
+
+      return recipeId;
+    },
+    updateRecipe: (id: string, patch: Partial<Recipe>) => {
+      actions.updateRecipe(id, patch);
+      if (session) {
+        const dbPatch: { name?: string; preparation?: string } = {};
+        if (patch.name !== undefined) dbPatch.name = patch.name;
+        if (patch.preparation !== undefined) dbPatch.preparation = patch.preparation;
+        if (Object.keys(dbPatch).length > 0) {
+          updateRecipeInDb(session.user.id, id, dbPatch).catch((error) => {
+            setSyncError(formatSupabaseError("Could not update recipe", getErrorMessage(error)));
+          });
+        }
+      }
+    },
+    removeRecipe: (id: string) => {
+      actions.removeRecipe(id);
+      if (session) {
+        deleteRecipeFromDb(session.user.id, id).catch((error) => {
+          setSyncError(formatSupabaseError("Could not delete recipe", getErrorMessage(error)));
+        });
+      }
+    },
+    addIngredient: (recipeId: string) => {
+      const newId = crypto.randomUUID();
+      actions.addIngredient(recipeId, newId);
+      if (session) {
+        const recipe = state.recipes.find((r) => r.id === recipeId);
+        const sortOrder = recipe?.ingredients.length ?? 0;
+        addIngredientToDb(session.user.id, recipeId, {
+          id: newId,
+          text: "",
+          sortOrder,
+        }).catch((error) => {
+          setSyncError(formatSupabaseError("Could not add ingredient", getErrorMessage(error)));
+        });
+      }
+    },
+    updateIngredient: (recipeId: string, ingredientId: string, patch: Partial<Pick<{ id: string; text: string }, "text">>) => {
+      actions.updateIngredient(recipeId, ingredientId, patch);
+      if (session && patch.text !== undefined) {
+        updateIngredientInDb(session.user.id, ingredientId, patch.text).catch((error) => {
+          setSyncError(formatSupabaseError("Could not update ingredient", getErrorMessage(error)));
+        });
+      }
+    },
+    removeIngredient: (recipeId: string, ingredientId: string) => {
+      actions.removeIngredient(recipeId, ingredientId);
+      if (session) {
+        deleteIngredientFromDb(session.user.id, ingredientId).catch((error) => {
+          setSyncError(formatSupabaseError("Could not delete ingredient", getErrorMessage(error)));
+        });
+      }
+    },
+    // ── Contacts ──────────────────────────────────────────────────────────
+    updateContacts: (patch: Partial<Contacts>) => {
+      actions.updateContacts(patch);
+      if (session) {
+        const merged = { ...state.contacts, ...patch };
+        saveContacts(session.user.id, merged).catch((error) => {
+          setSyncError(formatSupabaseError("Could not save contacts", getErrorMessage(error)));
         });
       }
     },

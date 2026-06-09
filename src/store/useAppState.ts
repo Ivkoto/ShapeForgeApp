@@ -11,6 +11,7 @@ import type {
   MealSlot,
   Recipe,
   RecipeGroup,
+  ShoppingCategory,
   ShoppingItem,
   Supplement,
   Weekday,
@@ -142,6 +143,7 @@ export function emptyRecipe(group: RecipeGroup): Recipe {
     group,
     ingredients: [{ id: createId("ingredient"), text: "" }],
     preparation: "",
+    monthIds: [],
   };
 }
 
@@ -236,7 +238,10 @@ export function useAppState() {
 
   // ── Shopping ────────────────────────────────────────────────────────────────
 
-  function addShoppingItem(monthId: string, item: ShoppingItem) {
+  function addShoppingItem(monthId: string, category: ShoppingCategory | ShoppingItem) {
+    const item: ShoppingItem = typeof category === "string"
+      ? { id: createId("shopping"), category, categoryId: "", name: "", quantity: "", checked: false }
+      : category;
     setState((s) => {
       const existing = s.shoppingLists.find((list) => list.monthId === monthId);
       if (existing) {
@@ -358,10 +363,19 @@ export function useAppState() {
 
   // ── Recipes ─────────────────────────────────────────────────────────────────
 
-  function addRecipe(group: RecipeGroup): string {
-    const recipe = emptyRecipe(group);
+  function addRecipe(group: RecipeGroup, recipeId?: string, ingredientId?: string): string {
+    const id = recipeId ?? createId("recipe");
+    const ingId = ingredientId ?? createId("ingredient");
+    const recipe: Recipe = {
+      id,
+      name: "Нова рецепта",
+      group,
+      ingredients: [{ id: ingId, text: "" }],
+      preparation: "",
+      monthIds: [],
+    };
     setState((s) => ({ ...s, recipes: [recipe, ...s.recipes] }));
-    return recipe.id;
+    return id;
   }
 
   function removeRecipe(id: string) {
@@ -377,7 +391,7 @@ export function useAppState() {
     }));
   }
 
-  function addIngredient(recipeId: string) {
+  function addIngredient(recipeId: string, id?: string) {
     setState((s) => ({
       ...s,
       recipes: s.recipes.map((recipe) =>
@@ -386,7 +400,7 @@ export function useAppState() {
               ...recipe,
               ingredients: [
                 ...recipe.ingredients,
-                { id: createId("ingredient"), text: "" },
+                { id: id ?? createId("ingredient"), text: "" },
               ],
             }
           : recipe

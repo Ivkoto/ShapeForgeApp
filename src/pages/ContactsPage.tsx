@@ -33,6 +33,21 @@ export function ContactsPage({ contacts, isEditing, updateContacts }: ContactsPa
               value={contacts.email}
               onChange={(v) => updateContacts({ email: v })}
             />
+            <Field
+              label="Facebook"
+              value={contacts.facebookUrl}
+              onChange={(v) => updateContacts({ facebookUrl: v })}
+            />
+            <Field
+              label="Instagram"
+              value={contacts.instagramUrl}
+              onChange={(v) => updateContacts({ instagramUrl: v })}
+            />
+            <Field
+              label="Уебсайт"
+              value={contacts.websiteUrl}
+              onChange={(v) => updateContacts({ websiteUrl: v })}
+            />
             <label className="full-field">
               Бележки
               <textarea
@@ -60,18 +75,24 @@ export function ContactsPage({ contacts, isEditing, updateContacts }: ContactsPa
                   {contacts.email}
                 </a>
               ) : null}
-              <a href="https://www.facebook.com/rorifitness" target="_blank" rel="noreferrer">
-                <Facebook size={14} />
-                facebook.com/rorifitness
-              </a>
-              <a href="https://www.instagram.com/rori_fitness" target="_blank" rel="noreferrer">
-                <Instagram size={14} />
-                instagram.com/rori_fitness
-              </a>
-              <a href="https://www.rorifit.com" target="_blank" rel="noreferrer">
-                <Globe size={14} />
-                www.rorifit.com
-              </a>
+              {contacts.facebookUrl ? (
+                <a href={contacts.facebookUrl} target="_blank" rel="noreferrer">
+                  <Facebook size={14} />
+                  {contacts.facebookUrl.replace(/^https?:\/\//, "")}
+                </a>
+              ) : null}
+              {contacts.instagramUrl ? (
+                <a href={contacts.instagramUrl} target="_blank" rel="noreferrer">
+                  <Instagram size={14} />
+                  {contacts.instagramUrl.replace(/^https?:\/\//, "")}
+                </a>
+              ) : null}
+              {contacts.websiteUrl ? (
+                <a href={contacts.websiteUrl} target="_blank" rel="noreferrer">
+                  <Globe size={14} />
+                  {contacts.websiteUrl.replace(/^https?:\/\//, "")}
+                </a>
+              ) : null}
             </div>
             {contacts.notes ? (
               <p className={styles.notes}>{contacts.notes}</p>
