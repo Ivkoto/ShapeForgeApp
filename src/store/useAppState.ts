@@ -612,9 +612,14 @@ export function useAppState() {
     setState(normalizeAppState(nextState));
   }
 
+  function mergeState(patch: Partial<AppState>) {
+    setState((s) => normalizeAppState({ ...s, ...patch }));
+  }
+
   return {
     state,
     replaceState,
+    mergeState,
     // food
     updateStartDate,
     updateDailyTargets,

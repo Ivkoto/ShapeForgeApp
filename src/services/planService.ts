@@ -1,6 +1,12 @@
 import { supabase } from "../lib/supabase";
 import type { AdviceItem, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "../types";
 
+function throwSupabaseError(context: string, error: { message: string; code?: string; details?: string | null; hint?: string | null }): never {
+  console.error(context, error);
+  const details = [error.code, error.details, error.hint].filter(Boolean).join(" | ");
+  throw new Error(details ? `${context}: ${error.message} (${details})` : `${context}: ${error.message}`);
+}
+
 // ── Types for DB rows ────────────────────────────────────────────────────────
 
 interface DbDailyTargets {
@@ -94,12 +100,20 @@ export async function fetchPlanData(userId: string): Promise<PlanData> {
       .returns<DbSupplement[]>(),
   ]);
 
+  if (profileRes.error) {
+    throwSupabaseError("Could not load profile", profileRes.error);
+  }
+  if (targetsRes.error) {
+    throwSupabaseError("Could not load daily targets", targetsRes.error);
+  }
+  if (supplementsRes.error) {
+    throwSupabaseError("Could not load supplements", supplementsRes.error);
+  }
+
   return {
     planStartDate: profileRes.data?.plan_start_date ?? null,
     dailyTargets: targetsRes.data ? dbTargetsToLocal(targetsRes.data) : null,
-    supplements: supplementsRes.error
-      ? null
-      : dbSupplementsToLocal(supplementsRes.data ?? []),
+    supplements: dbSupplementsToLocal(supplementsRes.data ?? []),
   };
 }
 
@@ -246,7 +260,9 @@ export async function fetchBodyMeasurements(
     .order("measured_on", { ascending: false })
     .returns<DbBodyMeasurement[]>();
 
-  if (error) return null;
+  if (error) {
+    throwSupabaseError("Could not load body measurements", error);
+  }
 
   return (data ?? []).map(dbMeasurementToLocal);
 }
@@ -321,7 +337,9 @@ export async function fetchAdviceItems(
     .order("sort_order", { ascending: true })
     .returns<DbAdviceItem[]>();
 
-  if (error) return null;
+  if (error) {
+    throwSupabaseError("Could not load advice items", error);
+  }
 
   return (data ?? []).map(dbAdviceToLocal);
 }
@@ -402,7 +420,9 @@ export async function fetchPlanInfoCards(
     .order("sort_order", { ascending: true })
     .returns<DbPlanInfoCard[]>();
 
-  if (error) return null;
+  if (error) {
+    throwSupabaseError(`Could not load plan info cards (${sectionKey})`, error);
+  }
 
   return (data ?? []).map(dbCardToLocal);
 }

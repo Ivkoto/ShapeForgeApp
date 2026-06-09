@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AppShell, pageLoaders } from "./app/AppShell";
@@ -24,7 +24,7 @@ import {
   syncInfoCardSortOrders,
 } from "./services/planService";
 import { useAppState } from "./store/useAppState";
-import type { AdviceItem, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "./types";
+import type { AdviceItem, AppState, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "./types";
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -81,6 +81,10 @@ type AuthMode = "signin" | "signup";
 
 function formatSupabaseError(context: string, message: string) {
   return `${context}: ${message}`;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function getAuthHashError() {
@@ -141,16 +145,9 @@ export function App() {
   const [isEditingContacts, setIsEditingContacts] = useState(false);
 
   const actions = useAppState();
-  const { state, replaceState } = actions;
+  const { state, mergeState } = actions;
   const monthIds = state.mealPlanMonths.map((month) => month.id);
   const safeActiveMonthId = getSafeMonthId(activeMonthId, monthIds);
-
-  const latestStateRef = useRef(state);
-  const sessionUserIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    latestStateRef.current = state;
-  }, [state]);
 
   useEffect(() => {
     const client = supabase;
@@ -176,9 +173,7 @@ export function App() {
         setAuthError(formatSupabaseError("Authentication failed", error.message));
       }
 
-      const nextSession = data.session ?? null;
-      sessionUserIdRef.current = nextSession?.user.id ?? null;
-      setSession(nextSession);
+      setSession(data.session ?? null);
       setAuthLoading(false);
     };
 
@@ -190,8 +185,6 @@ export function App() {
       if (!isMounted) {
         return;
       }
-
-      sessionUserIdRef.current = nextSession?.user.id ?? null;
 
       setSession(nextSession);
       setSyncError(null);
@@ -231,25 +224,26 @@ export function App() {
 
     const loadPlanData = async () => {
       try {
-        const foodData = await fetchPlanData(session.user.id);
+        const planData = await fetchPlanData(session.user.id);
         if (cancelled) return;
 
         const hasData =
-          foodData.planStartDate !== null ||
-          foodData.dailyTargets !== null ||
-          foodData.supplements !== null;
+          planData.planStartDate !== null ||
+          planData.dailyTargets !== null ||
+          planData.supplements !== null;
 
         if (!hasData) return;
 
         setSyncError(null);
-        replaceState({
-          ...latestStateRef.current,
-          ...(foodData.planStartDate !== null && { startDate: foodData.planStartDate }),
-          ...(foodData.dailyTargets !== null && { dailyTargets: foodData.dailyTargets }),
-          ...(foodData.supplements !== null && { supplements: foodData.supplements }),
+        mergeState({
+          ...(planData.planStartDate !== null && { startDate: planData.planStartDate }),
+          ...(planData.dailyTargets !== null && { dailyTargets: planData.dailyTargets }),
+          ...(planData.supplements !== null && { supplements: planData.supplements }),
         });
-      } catch {
-        // Silently fall back to local state.
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load Plan data", getErrorMessage(error)));
+        }
       }
     };
 
@@ -276,12 +270,13 @@ export function App() {
 
         if (measurements === null) return;
 
-        replaceState({
-          ...latestStateRef.current,
+        mergeState({
           bodyMeasurements: measurements,
         });
-      } catch {
-        // Silently fall back to local state.
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load measurements", getErrorMessage(error)));
+        }
       }
     };
 
@@ -309,12 +304,13 @@ export function App() {
         if (advice === null) return; // error → fall back
 
         
-        replaceState({
-          ...latestStateRef.current,
+        mergeState({
           advice,
         });
-      } catch {
-        // Silently fall back to local state.
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load advice", getErrorMessage(error)));
+        }
       }
     };
 
@@ -343,7 +339,7 @@ export function App() {
         ]);
         if (cancelled) return;
 
-        const patch: Partial<typeof latestStateRef.current> = {};
+        const patch: Partial<AppState> = {};
 
         if (eatingOut !== null) {
           patch.diningOutItems = eatingOut;
@@ -358,12 +354,11 @@ export function App() {
         if (Object.keys(patch).length === 0) return;
 
         
-        replaceState({
-          ...latestStateRef.current,
-          ...patch,
-        });
-      } catch {
-        // Silently fall back to local state.
+        mergeState(patch);
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load Plan info cards", getErrorMessage(error)));
+        }
       }
     };
 
