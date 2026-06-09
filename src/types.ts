@@ -9,6 +9,15 @@ export type ShoppingCategory =
   | "ЗЪРНЕНИ, БОБОВИ, ЯДКИ и СЕМЕНА"
   | "ДРУГИ";
 
+export type ShoppingCategoryInfo = {
+  id: string;
+  name: string;
+  slug: string;
+  iconKey: string;
+  colorKey: string;
+  sortOrder: number;
+};
+
 export type Supplement = {
   id: string;
   name: string;
@@ -66,6 +75,7 @@ export type MealPlanMonth = {
 export type ShoppingItem = {
   id: string;
   category: ShoppingCategory;
+  categoryId: string;
   name: string;
   quantity: string;
   checked: boolean;
@@ -160,6 +170,7 @@ export type AppState = {
   dailyTargets: DailyTargets;
   mealPlanMonths: MealPlanMonth[];
   shoppingLists: MonthlyShoppingList[];
+  shoppingCategories: ShoppingCategoryInfo[];
   recipes: Recipe[];
   trainingGoal: TrainingGoal;
   trainingMeta: TrainingMeta;

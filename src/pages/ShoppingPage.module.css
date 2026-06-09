@@ -41,6 +41,13 @@
   max-width: 80px;
 }
 
+.categorySelect {
+  flex: 0 0 auto;
+  max-width: 160px;
+  font-size: 0.8rem;
+  min-height: 34px;
+}
+
 .itemText {
   font-size: 0.9rem;
   color: #213128;

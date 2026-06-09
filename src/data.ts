@@ -4,7 +4,6 @@ import type {
   Exercise,
   InfoCardItem,
   MealSlot,
-  ShoppingCategory,
   Supplement,
   Weekday,
   WorkoutSection,
@@ -15,14 +14,6 @@ export const storageKey = "shapeforge-state-v2";
 export const weekdays: Weekday[] = ["ДЕН 1", "ДЕН 2", "ДЕН 3", "ДЕН 4", "ДЕН 5", "ДЕН 6", "ДЕН 7"];
 
 export const mealSlots: MealSlot[] = ["ЗАКУСКА", "СНАК 1", "ОБЯД", "СНАК 2", "ВЕЧЕРЯ"];
-
-export const shoppingCategories: ShoppingCategory[] = [
-  "ПЛОДОВЕ и ЗЕЛЕНЧУЦИ",
-  "МЕСО, РИБА и ЯЙЦА",
-  "МЛЕЧНИ ПРОДУКТИ",
-  "ЗЪРНЕНИ, БОБОВИ, ЯДКИ и СЕМЕНА",
-  "ДРУГИ",
-];
 
 export const workoutSectionTitles: WorkoutSection["title"][] = ["Загрявка", "Същинска част", "Финал", "Охлаждане"];
 
@@ -98,20 +89,8 @@ export const defaultState: AppState = {
     water: "",
   },
   mealPlanMonths: [],
-  shoppingLists: [
-    {
-      monthId: "month-1",
-      items: shoppingCategories.map((category) => ({
-        id: createId("shopping"),
-        category,
-        name: "",
-        quantity: "",
-        checked: false,
-      })),
-    },
-    { monthId: "month-2", items: [] },
-    { monthId: "month-3", items: [] },
-  ],
+  shoppingLists: [],
+  shoppingCategories: [],
   recipes: [
     {
       id: "recipe-placeholder",

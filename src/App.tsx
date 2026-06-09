@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AppShell, pageLoaders } from "./app/AppShell";
 import type { PageId } from "./app/AppShell";
-import { supabase, supabaseConfigError } from "./lib/supabase";
+import { supabase, supabaseConfigError } from "./clients/supabase";
 import {
   fetchPlanData,
   savePlanStartDate,
@@ -24,8 +24,14 @@ import {
   syncInfoCardSortOrders,
 } from "./services/planService";
 import { fetchRegimeData, findDayId, upsertMealEntry } from "./services/foodService";
+import {
+  fetchShoppingData,
+  addShoppingItemToDb,
+  updateShoppingItemInDb,
+  deleteShoppingItemFromDb,
+} from "./services/shoppingService";
 import { useAppState } from "./store/useAppState";
-import type { AdviceItem, AppState, BodyMeasurement, DailyTargets, InfoCardItem, MealSlot, Supplement, Weekday } from "./types";
+import type { AdviceItem, AppState, BodyMeasurement, DailyTargets, InfoCardItem, MealSlot, ShoppingCategory, ShoppingItem, Supplement, Weekday } from "./types";
 
 const fallbackPage: PageId = "food";
 const fallbackMonthId = "month-1";
@@ -433,6 +439,38 @@ export function App() {
     };
   }, [authLoading, session?.user.id]);
 
+  // ── Load shopping data (categories, items) ─────────────────────────────────
+
+  useEffect(() => {
+    if (authLoading || !session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadShopping = async () => {
+      try {
+        const shoppingData = await fetchShoppingData(session.user.id);
+        if (cancelled) return;
+
+        mergeState({
+          shoppingCategories: shoppingData.categories,
+          shoppingLists: shoppingData.shoppingLists,
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setSyncError(formatSupabaseError("Could not load shopping data", getErrorMessage(error)));
+        }
+      }
+    };
+
+    void loadShopping();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, session?.user.id]);
+
 
   async function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -773,6 +811,64 @@ export function App() {
             setSyncError(formatSupabaseError("Could not save meal entry", getErrorMessage(error)));
           });
         }
+      }
+    },
+    // ── Shopping ──────────────────────────────────────────────────────────
+    addShoppingItem: (monthId: string, category: ShoppingCategory) => {
+      const catInfo = state.shoppingCategories.find((c) => c.name === category);
+      if (!catInfo) {
+        setSyncError("Категорията не е намерена в базата данни.");
+        return;
+      }
+
+      const newId = crypto.randomUUID();
+      const activeShopping = state.shoppingLists.find((l) => l.monthId === monthId);
+      const sortOrder = activeShopping?.items.filter((i) => i.category === category).length ?? 0;
+
+      const newItem: ShoppingItem = {
+        id: newId,
+        category,
+        categoryId: catInfo.id,
+        name: "",
+        quantity: "",
+        checked: false,
+      };
+
+      actions.addShoppingItem(monthId, newItem);
+
+      if (session) {
+        addShoppingItemToDb(session.user.id, monthId, catInfo.id, {
+          id: newId,
+          name: "",
+          quantity: "",
+          sortOrder,
+        }).catch((error) => {
+          setSyncError(formatSupabaseError("Could not add shopping item", getErrorMessage(error)));
+        });
+      }
+    },
+    updateShoppingItem: (id: string, patch: Partial<ShoppingItem>) => {
+      actions.updateShoppingItem(id, patch);
+      if (session) {
+        const dbPatch: { name?: string; quantity?: string; is_checked?: boolean; category_id?: string } = {};
+        if (patch.name !== undefined) dbPatch.name = patch.name;
+        if (patch.quantity !== undefined) dbPatch.quantity = patch.quantity;
+        if (patch.checked !== undefined) dbPatch.is_checked = patch.checked;
+        if (patch.categoryId !== undefined) dbPatch.category_id = patch.categoryId;
+
+        if (Object.keys(dbPatch).length > 0) {
+          updateShoppingItemInDb(id, dbPatch).catch((error) => {
+            setSyncError(formatSupabaseError("Could not update shopping item", getErrorMessage(error)));
+          });
+        }
+      }
+    },
+    removeShoppingItem: (id: string) => {
+      actions.removeShoppingItem(id);
+      if (session) {
+        deleteShoppingItemFromDb(id).catch((error) => {
+          setSyncError(formatSupabaseError("Could not delete shopping item", getErrorMessage(error)));
+        });
       }
     },
   };

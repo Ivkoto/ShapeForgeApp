@@ -4,21 +4,37 @@ import { useState } from "react";
 import { CollapsiblePanel } from "../components/CollapsiblePanel";
 import { EmptyState } from "../components/EmptyState";
 import { PageStack } from "../components/PageStack";
-import { shoppingCategories } from "../data";
-import type { MealPlanMonth, MonthlyShoppingList, ShoppingCategory, ShoppingItem } from "../types";
+import type { MealPlanMonth, MonthlyShoppingList, ShoppingCategory, ShoppingCategoryInfo, ShoppingItem } from "../types";
 import styles from "./ShoppingPage.module.css";
 
-const categoryConfig: Record<ShoppingCategory, { icon: React.ReactNode; color: string }> = {
-  "ПЛОДОВЕ и ЗЕЛЕНЧУЦИ": { icon: <Apple size={18} />, color: "#16a34a" },
-  "МЕСО, РИБА и ЯЙЦА": { icon: <Beef size={18} />, color: "#dc2626" },
-  "МЛЕЧНИ ПРОДУКТИ": { icon: <Milk size={18} />, color: "#2563eb" },
-  "ЗЪРНЕНИ, БОБОВИ, ЯДКИ и СЕМЕНА": { icon: <Wheat size={18} />, color: "#d97706" },
-  "ДРУГИ": { icon: <Package size={18} />, color: "#7c3aed" },
+const iconMap: Record<string, React.ReactNode> = {
+  apple: <Apple size={18} />,
+  beef: <Beef size={18} />,
+  milk: <Milk size={18} />,
+  wheat: <Wheat size={18} />,
+  "shopping-basket": <Package size={18} />,
 };
+
+const colorMap: Record<string, string> = {
+  purple: "#7c3aed",
+  green: "#16a34a",
+  red: "#dc2626",
+  blue: "#2563eb",
+  orange: "#d97706",
+};
+
+function getCategoryIcon(iconKey: string): React.ReactNode {
+  return iconMap[iconKey] ?? <Package size={18} />;
+}
+
+function getCategoryColor(colorKey: string): string {
+  return colorMap[colorKey] ?? "#7c3aed";
+}
 
 interface ShoppingPageProps {
   mealPlanMonths: MealPlanMonth[];
   shoppingLists: MonthlyShoppingList[];
+  shoppingCategories: ShoppingCategoryInfo[];
   activeMonthId: string;
   onMonthChange: (monthId: string) => void;
   isEditing: boolean;
@@ -29,6 +45,7 @@ interface ShoppingPageProps {
 
 export function ShoppingPage({
   shoppingLists,
+  shoppingCategories,
   activeMonthId,
   isEditing,
   addShoppingItem,
@@ -45,15 +62,17 @@ export function ShoppingPage({
   return (
     <PageStack>
       <div className={styles.categoryGrid}>
-        {shoppingCategories.map((category) => {
-          const items = activeShopping?.items.filter((item) => item.category === category) ?? [];
+        {shoppingCategories.map((cat) => {
+          const items = activeShopping?.items.filter((item) => item.category === cat.name) ?? [];
+          const icon = getCategoryIcon(cat.iconKey);
+          const color = getCategoryColor(cat.colorKey);
           return (
             <CollapsiblePanel
-              key={category}
-              icon={<span style={{ color: categoryConfig[category].color }}>{categoryConfig[category].icon}</span>}
-              title={category}
-              isOpen={!!openSections[category]}
-              onToggle={() => toggle(category)}
+              key={cat.id}
+              icon={<span style={{ color }}>{icon}</span>}
+              title={cat.name}
+              isOpen={!!openSections[cat.id]}
+              onToggle={() => toggle(cat.id)}
             >
               <div className={styles.shoppingList}>
                 {items.length === 0 ? (
@@ -85,6 +104,24 @@ export function ShoppingPage({
                           }
                           placeholder="Кол."
                         />
+                        <select
+                          className={styles.categorySelect}
+                          value={item.categoryId}
+                          onChange={(e) => {
+                            const newCat = shoppingCategories.find((c) => c.id === e.target.value);
+                            if (newCat) {
+                              updateShoppingItem(item.id, {
+                                category: newCat.name as ShoppingCategory,
+                                categoryId: newCat.id,
+                              });
+                            }
+                          }}
+                          aria-label="Категория"
+                        >
+                          {shoppingCategories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
                         <button
                           type="button"
                           className="icon-button danger"
@@ -106,7 +143,7 @@ export function ShoppingPage({
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={() => addShoppingItem(activeMonthId, category)}
+                  onClick={() => addShoppingItem(activeMonthId, cat.name as ShoppingCategory)}
                 >
                   <Plus size={16} />
                   Добави

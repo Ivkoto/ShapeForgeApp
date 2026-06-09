@@ -11,7 +11,6 @@ import type {
   MealSlot,
   Recipe,
   RecipeGroup,
-  ShoppingCategory,
   ShoppingItem,
   Supplement,
   Weekday,
@@ -237,15 +236,8 @@ export function useAppState() {
 
   // ── Shopping ────────────────────────────────────────────────────────────────
 
-  function addShoppingItem(monthId: string, category: ShoppingCategory) {
+  function addShoppingItem(monthId: string, item: ShoppingItem) {
     setState((s) => {
-      const item: ShoppingItem = {
-        id: createId("shopping"),
-        category,
-        name: "",
-        quantity: "",
-        checked: false,
-      };
       const existing = s.shoppingLists.find((list) => list.monthId === monthId);
       if (existing) {
         return {

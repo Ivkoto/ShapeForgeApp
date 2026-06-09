@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { supabase } from "../clients/supabase";
 import type { AdviceItem, BodyMeasurement, DailyTargets, InfoCardItem, Supplement } from "../types";
 
 function throwSupabaseError(context: string, error: { message: string; code?: string; details?: string | null; hint?: string | null }): never {

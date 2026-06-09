@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { supabase } from "../clients/supabase";
 import type { MealPlanMonth, MealPlanRow, MealSlot, Weekday } from "../types";
 import { weekdays, mealSlots } from "../data";
 

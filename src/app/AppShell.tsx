@@ -267,6 +267,7 @@ export function AppShell({
             <ShoppingPage
               mealPlanMonths={state.mealPlanMonths}
               shoppingLists={state.shoppingLists}
+              shoppingCategories={state.shoppingCategories}
               activeMonthId={safeActiveMonthId}
               onMonthChange={setActiveMonthId}
               isEditing={isEditingShopping}
