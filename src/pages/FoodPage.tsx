@@ -602,6 +602,13 @@ function InfoCardList({ items, emptyText }: { items: InfoCardItem[]; emptyText: 
   );
 }
 
+function sanitizeDecimalInput(value: string): string {
+  const cleaned = value.replace(/,/g, ".").replace(/[^0-9.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot === -1) return cleaned;
+  return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+}
+
 function MeasurementCard({
   measurement,
   isEditing,
@@ -661,10 +668,10 @@ function MeasurementCard({
             <label key={key} className={styles.measurementField}>
               <span>{label}</span>
               <input
-                type="number"
-                inputMode="numeric"
+                type="text"
+                inputMode="decimal"
                 value={measurement[key]}
-                onChange={(e) => onUpdate(measurement.id, { [key]: e.target.value.replace(/[^0-9]/g, "") })}
+                onChange={(e) => onUpdate(measurement.id, { [key]: sanitizeDecimalInput(e.target.value) })}
                 placeholder="—"
                 readOnly={key === "height" && !isFirst}
               />
